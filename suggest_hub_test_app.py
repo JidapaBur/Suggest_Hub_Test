@@ -68,11 +68,12 @@ if cust_file:
     ]
 
     # Layer visibility controls
-    show_heatmap = st.checkbox("Show Heatmap", value=True)
-    show_customer_markers = st.checkbox("Show Customer Markers", value=True)
-    show_existing_hubs = st.checkbox("Show Existing Hubs", value=True)
-    show_suggested_hubs = st.checkbox("Show Suggested Hubs", value=True)
-    show_hub_radius_layer = st.checkbox("Show Existing Hub Radius Zones", value=True)
+    with st.expander("🧭 Layer Visibility Controls"):
+        show_heatmap = st.checkbox("Show Heatmap", value=True)
+        show_customer_markers = st.checkbox("Show Customer Markers", value=True)
+        show_existing_hubs = st.checkbox("Show Existing Hubs", value=True)
+        show_suggested_hubs = st.checkbox("Show Suggested Hubs", value=True)
+        show_hub_radius_layer = st.checkbox("Show Existing Hub Radius Zones", value=True)
 
     # Filter by Type
     customer_types = cust_data['Type'].dropna().unique().tolist()
