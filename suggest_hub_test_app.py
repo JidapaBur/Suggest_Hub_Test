@@ -111,6 +111,20 @@ if cust_file:
             new_hub_kmeans.fit(outside_customers[['Lat', 'Long']])
             new_hub_locations = new_hub_kmeans.cluster_centers_
 
-            new_hub_df = pd.DataFrame(new_hub_locations, columns=['latitude', 'longitude'])
-            st.map(new_hub_df)
-
+            st.subheader("🧭 New Hub Suggestions Map")
+            m_new = folium.Map(location=[13.75, 100.5], zoom_start=6)
+            for i, (lat, lon) in enumerate(new_hub_locations):
+                folium.Marker(
+                    location=[lat, lon],
+                    popup=f"Suggest New Hub #{i+1}",
+                    icon=folium.Icon(color='purple', icon='star', prefix='fa')
+                ).add_to(m_new)
+                folium.Circle(
+                    location=[lat, lon],
+                    radius=radius_threshold_km * 1000,
+                    color='purple',
+                    fill=True,
+                    fill_opacity=0.1,
+                    popup=f"Radius {radius_threshold_km} km"
+                ).add_to(m_new)
+            st_folium(m_new, width=1100, height=600, key="new_hub_map")
