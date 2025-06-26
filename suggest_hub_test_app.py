@@ -52,6 +52,13 @@ if cust_file:
         st.error(f"❌ Failed to load customer file: {e}")
         st.stop()
 
+    # Layer visibility controls
+    show_heatmap = st.checkbox("Show Heatmap", value=True)
+    show_province_circles = st.checkbox("Show Customer Province Circles", value=True)
+    show_customer_markers = st.checkbox("Show Customer Markers", value=True)
+    show_existing_hubs = st.checkbox("Show Existing Hubs", value=True)
+    show_suggested_hubs = st.checkbox("Show Suggested Hubs", value=True)
+
     # Filter by Type
     customer_types = cust_data['Type'].dropna().unique().tolist()
     selected_types = st.multiselect("Filter Customer Types:", options=customer_types, default=customer_types)
@@ -119,7 +126,8 @@ if cust_file:
                     popup=row['Hub_Name'],
                     icon=folium.Icon(color='blue', icon='store', prefix='fa')
                 ).add_to(existing_layer)
-            existing_layer.add_to(m_new)
+            if show_existing_hubs:
+                existing_layer.add_to(m_new)
 
             # Outside customer layer
             outside_layer = FeatureGroup(name="Outside Customers")
@@ -132,7 +140,8 @@ if cust_file:
                     fill_opacity=0.5,
                     popup=row['Customer_Code']
                 ).add_to(outside_layer)
-            outside_layer.add_to(m_new)
+            if show_customer_markers:
+                outside_layer.add_to(m_new)
 
             # Suggested hub layer
             suggest_layer = FeatureGroup(name="Suggested New Hubs")
@@ -150,30 +159,33 @@ if cust_file:
                     fill_opacity=0.1,
                     popup=f"Radius {radius_threshold_km} km"
                 ).add_to(suggest_layer)
-            suggest_layer.add_to(m_new)
+            if show_suggested_hubs:
+                suggest_layer.add_to(m_new)
 
             # Add heatmaps for Lotus and Makro
-            lotus_data = cust_data[cust_data['Type'].str.lower() == 'lotus']
-            makro_data = cust_data[cust_data['Type'].str.lower() == 'makro']
+            if show_heatmap:
+                lotus_data = cust_data[cust_data['Type'].str.lower() == 'lotus']
+                makro_data = cust_data[cust_data['Type'].str.lower() == 'makro']
 
-            lotus_heatmap_layer = FeatureGroup(name="Lotus Heatmap")
-            HeatMap(
-                lotus_data[['Lat', 'Long']].values.tolist(),
-                radius=10,
-                gradient={0.2: '#C5E3B7', 0.6: '#78BE20', 1: '#4C8020'}
-            ).add_to(lotus_heatmap_layer)
-            lotus_heatmap_layer.add_to(m_new)
+                lotus_heatmap_layer = FeatureGroup(name="Lotus Heatmap")
+                HeatMap(
+                    lotus_data[['Lat', 'Long']].values.tolist(),
+                    radius=10,
+                    gradient={0.2: '#C5E3B7', 0.6: '#78BE20', 1: '#4C8020'}
+                ).add_to(lotus_heatmap_layer)
+                lotus_heatmap_layer.add_to(m_new)
 
-            makro_heatmap_layer = FeatureGroup(name="Makro Heatmap")
-            HeatMap(
-                makro_data[['Lat', 'Long']].values.tolist(),
-                radius=10,
-                gradient={0.2: '#F9C3C3', 0.6: '#ED1C24', 1: '#A10B0B'}
-            ).add_to(makro_heatmap_layer)
-            makro_heatmap_layer.add_to(m_new)
+                makro_heatmap_layer = FeatureGroup(name="Makro Heatmap")
+                HeatMap(
+                    makro_data[['Lat', 'Long']].values.tolist(),
+                    radius=10,
+                    gradient={0.2: '#F9C3C3', 0.6: '#ED1C24', 1: '#A10B0B'}
+                ).add_to(makro_heatmap_layer)
+                makro_heatmap_layer.add_to(m_new)
 
             LayerControl().add_to(m_new)
             st_folium(m_new, width=1100, height=600, key="new_hub_map", returned_objects=[], feature_group_to_add=None, center=[13.75, 100.5], zoom=6)
+
 
 
 
