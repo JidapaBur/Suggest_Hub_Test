@@ -111,5 +111,6 @@ if cust_file:
             new_hub_kmeans.fit(outside_customers[['Lat', 'Long']])
             new_hub_locations = new_hub_kmeans.cluster_centers_
 
-            st.map(pd.DataFrame(new_hub_locations, columns=['Lat', 'Long']))
+            new_hub_df = pd.DataFrame(new_hub_locations, columns=['latitude', 'longitude'])
+            st.map(new_hub_df)
 
