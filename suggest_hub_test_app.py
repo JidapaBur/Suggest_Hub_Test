@@ -89,7 +89,7 @@ if cust_file:
     for _, row in cust_data.iterrows():
         type_lower = row.get('Type', '').lower()
         icon = 'shopping-cart' if type_lower == 'lotus' else 'store'
-        color = 'blue' if type_lower == 'lotus' else 'purple'
+        color = 'lightblue' if type_lower == 'lotus' else 'red'
         popup_text = f"Customer: {row['Customer_Code']} ({row.get('Type', 'Unknown')})<br>Province: {row.get('Province', 'N/A')}"
         folium.Marker(
             [row['Lat'], row['Long']],
@@ -102,8 +102,8 @@ if cust_file:
     if dc_file:
         for _, row in dc_data.iterrows():
             type_lower = row.get('Type', '').lower()
-            icon = 'truck' if type_lower == 'lotus' else 'warehouse'
-            color = 'red' if type_lower == 'lotus' else 'orange'
+            icon = 'store' if type_lower == 'lotus' else 'warehouse'
+            color = 'lightblue' if type_lower == 'lotus' else 'red'
             popup_text = f"DC: {row['DC_Name']} ({row.get('Type', 'Unknown')})<br>Province: {row.get('Province', 'N/A')}"
             folium.Marker(
                 [row['Lat'], row['Long']],
