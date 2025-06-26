@@ -5,12 +5,13 @@ from folium import FeatureGroup, LayerControl
 from folium.plugins import HeatMap, MarkerCluster
 from streamlit_folium import st_folium
 from sklearn.cluster import KMeans
-from geopy.distance import great_circle
+from geopy.distance import great_circle, geodesic
+import numpy as np
 
 st.set_page_config(layout="wide")
 st.title("📦 Customer & Hub Visualization Tool")
 # Footer note
-st.markdown("<div style='text-align:right; font-size:12px; color:gray;'>Version 1.0.2 Developed by Jidapa Buranachan</div>", unsafe_allow_html=True)
+st.markdown("<div style='text-align:right; font-size:12px; color:gray;'>Version 1.0.3 Developed by Jidapa Buranachan</div>", unsafe_allow_html=True)
 
 # Downloadable template section
 st.markdown("### 📥 Download Template Files")
@@ -91,161 +92,24 @@ if cust_file:
         nearest_df = pd.DataFrame(results)
         st.dataframe(nearest_df)
 
-    # Suggested hub clustering (KMeans)
-    st.subheader("🌐 Suggested Hub Locations (KMeans)")
-    n_dc = st.slider("Select number of suggested hubs (KMeans):", 1, 10, 5)
-    kmeans = KMeans(n_clusters=n_dc, random_state=42)
-    kmeans.fit(cust_data[['Lat', 'Long']])
-    kmeans_dc_locations = kmeans.cluster_centers_
+        # Suggest New Hubs for Out-of-Radius Customers
+        st.subheader("🚧 Suggest New Hubs Based on Radius")
+        radius_threshold_km = st.slider("Set Radius Threshold from Existing Hubs (km):", 10, 500, 100)
 
-    # Radius-based Hub Suggestion (separate logic)
-    st.subheader("🧭 Radius-based Hub Grouping (DBSCAN-like)")
-    radius_km = st.slider("Radius per hub (km):", 10, 500, 100, key="radius_custom")
-    radius_m = radius_km * 1000
+        def is_outside_hubs(lat, lon):
+            return all(geodesic((lat, lon), (hub_lat, hub_lon)).km > radius_threshold_km for hub_lat, hub_lon in dc_data[['Lat', 'Long']].values)
 
-    from geopy.distance import geodesic
-    import numpy as np
+        cust_data['Outside_Hub'] = cust_data.apply(lambda row: is_outside_hubs(row['Lat'], row['Long']), axis=1)
+        outside_customers = cust_data[cust_data['Outside_Hub'] == True]
 
-    custom_dc_locations = []
-    unassigned = cust_data.copy()
-    while not unassigned.empty:
-        center = unassigned[['Lat', 'Long']].iloc[0].values
-        in_radius = unassigned.apply(
-            lambda row: geodesic(center, (row['Lat'], row['Long'])).km <= radius_km,
-            axis=1
-        )
-        group = unassigned[in_radius]
-        custom_dc_locations.append(group[['Lat', 'Long']].mean().values)
-        unassigned = unassigned[~in_radius]
+        st.markdown(f"<b>{len(outside_customers)} customers</b> are outside the {radius_threshold_km} km range from existing hubs.", unsafe_allow_html=True)
 
-    # Choose one for map rendering (KMeans or custom)
-    clustering_choice = st.radio("Select clustering result to display on map:", ["KMeans", "Radius-based"])
-    dc_locations = kmeans_dc_locations if clustering_choice == "KMeans" else custom_dc_locations
+        if not outside_customers.empty:
+            # KMeans for new hub suggestion based on outside customers
+            n_new_hubs = st.slider("How many new hubs to suggest for uncovered areas?", 1, 10, 3)
+            new_hub_kmeans = KMeans(n_clusters=n_new_hubs, random_state=42)
+            new_hub_kmeans.fit(outside_customers[['Lat', 'Long']])
+            new_hub_locations = new_hub_kmeans.cluster_centers_
 
+            st.map(pd.DataFrame(new_hub_locations, columns=['Lat', 'Long']))
 
-    # Layer visibility controls
-    show_heatmap = st.checkbox("Show Heatmap", value=True)
-    show_province_circles = st.checkbox("Show Customer Province Circles", value=True)
-    show_customer_markers = st.checkbox("Show Customer Markers", value=True)
-    show_existing_hubs = st.checkbox("Show Existing Hubs", value=True)
-    show_suggested_hubs = st.checkbox("Show Suggested Hubs", value=True)
-
-    # Create folium map
-    m = folium.Map(location=[13.75, 100.5], zoom_start=6)
-
-    
-
-    # Layer: Heatmap per brand (Lotus & Makro)
-    if show_heatmap:
-        # --- แยกข้อมูลลูกค้า ---
-        lotus_data = cust_data[cust_data['Type'].str.lower() == 'lotus']
-        makro_data = cust_data[cust_data['Type'].str.lower() == 'makro']
-
-        # --- Heatmap Layer: Lotus ---
-        lotus_heatmap_layer = FeatureGroup(name="Lotus Heatmap")
-        HeatMap(
-            lotus_data[['Lat', 'Long']].values.tolist(),
-            radius=10,
-            gradient={0.2: '#C5E3B7', 0.6: '#78BE20', 1: '#4C8020'}  # Green shades
-        ).add_to(lotus_heatmap_layer)
-        lotus_heatmap_layer.add_to(m)
-
-        # --- Heatmap Layer: Makro ---
-        makro_heatmap_layer = FeatureGroup(name="Makro Heatmap")
-        HeatMap(
-            makro_data[['Lat', 'Long']].values.tolist(),
-            radius=10,
-            gradient={0.2: '#F9C3C3', 0.6: '#ED1C24', 1: '#A10B0B'}  # Red shades
-        ).add_to(makro_heatmap_layer)
-        makro_heatmap_layer.add_to(m)
-
-
-    # Province-based Circle Visualization
-    province_layer = FeatureGroup(name="Customer Circles")
-    province_counts = cust_data['Province'].value_counts()
-    for province, count in province_counts.items():
-        subset = cust_data[cust_data['Province'] == province]
-        if not subset.empty:
-            lat, lon = subset[['Lat', 'Long']].mean()
-            # Dynamic popup listing first few customer codes
-            sample_customers = subset['Customer_Code'].head(5).tolist()
-            sample_text = '<br>'.join(sample_customers)
-            full_popup = f"<b>{province}</b>: {count} customers<br><hr><b>Sample:</b><br>{sample_text}"
-            folium.CircleMarker(
-                location=[lat, lon],
-                radius=10 + count**0.5,
-                color='blue',
-                fill=True,
-                fill_opacity=0.5,
-                popup=folium.Popup(full_popup, max_width=250)
-            ).add_to(province_layer)
-            folium.CircleMarker(
-                location=[lat, lon],
-                radius=10 + count**0.5,
-                color='blue',
-                fill=True,
-                fill_opacity=0.5,
-                popup=f"{province}: {count} customers"
-            ).add_to(province_layer)
-    if show_province_circles:
-        province_layer.add_to(m)
-
-    # Layer: Customer markers
-    customer_layer = FeatureGroup(name="Customer Markers")
-    customer_cluster = MarkerCluster(name="Customer Cluster")
-    for _, row in cust_data.iterrows():
-        type_lower = row.get('Type', '').lower()
-        icon = 'home'
-        color = 'lightblue' if type_lower == 'lotus' else 'red'
-        popup_text = f"Customer: {row['Customer_Code']} ({row.get('Type', 'Unknown')})<br>Province: {row.get('Province', 'N/A')}"
-        folium.Marker(
-            [row['Lat'], row['Long']],
-            popup=popup_text,
-            icon=folium.Icon(color=color, icon=icon, prefix='fa')
-        ).add_to(customer_cluster)
-    customer_cluster.add_to(customer_layer)
-    if show_customer_markers:
-        customer_layer.add_to(m)
-
-    # Existing hubs by Type
-    hub_layer = FeatureGroup(name="Existing Hubs")
-    if dc_file:
-        for _, row in dc_data.iterrows():
-            type_lower = row.get('Type', '').lower()
-            icon = 'store'
-            color = 'lightblue' if type_lower == 'lotus' else 'red'
-            popup_text = f"Hub: {row['Hub_Name']} ({row.get('Type', 'Unknown')})<br>Province: {row.get('Province', 'N/A')}"
-            folium.Marker(
-                [row['Lat'], row['Long']],
-                popup=popup_text,
-                icon=folium.Icon(color=color, icon=icon, prefix='fa')
-            ).add_to(hub_layer)
-    if show_existing_hubs:
-        hub_layer.add_to(m)
-
-    # Suggested hubs
-    suggested_layer = FeatureGroup(name="Suggested Hubs")
-    for i, (lat, lon) in enumerate(dc_locations):
-        folium.Marker(
-            location=[lat, lon],
-            popup=f"Suggest Hub #{i+1}",
-            icon=folium.Icon(color='green', icon='star', prefix='fa')
-        ).add_to(suggested_layer)
-
-        folium.Circle(
-            location=[lat, lon],
-            radius=radius_m,
-            color='green',
-            fill=True,
-            fill_opacity=0.1,
-            popup=f"Radius {radius_km} km"
-        ).add_to(suggested_layer)
-    if show_suggested_hubs:
-        suggested_layer.add_to(m)
-
-    # Layer toggle
-    LayerControl().add_to(m)
-
-    # Show final map
-    st.subheader("🗺️ Visualization")
-    st_folium(m, width=1100, height=600, returned_objects=[], key="main_map")
