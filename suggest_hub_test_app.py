@@ -7,8 +7,6 @@ from streamlit_folium import st_folium
 from sklearn.cluster import KMeans
 from geopy.distance import great_circle, geodesic
 import numpy as np
-import geopandas as gpd
-from shapely.geometry import Point
 
 st.set_page_config(layout="wide")
 st.title("📦 Customer & Hub Visualization Tool")
@@ -16,7 +14,7 @@ st.title("📦 Customer & Hub Visualization Tool")
 st.markdown("<div style='text-align:right; font-size:12px; color:gray;'>Version 1.0.3 Developed by Jidapa Buranachan</div>", unsafe_allow_html=True)
 
 # Downloadable template section
-st.markdown("### 🗕️ Download Template Files")
+st.markdown("### 🗅️ Download Template Files")
 cust_template = pd.DataFrame(columns=["Customer_Code", "Lat", "Long", "Type", "Province"])
 dc_template = pd.DataFrame(columns=["Hub_Name", "Lat", "Long", "Type", "Province"])
 
@@ -40,9 +38,6 @@ with col2:
 cust_file = st.file_uploader("Upload Customer File (.csv with Lat, Long, Customer_Code, Type, Province)", type="csv")
 dc_file = st.file_uploader("Upload Hub File (.csv with Lat, Long, Hub_Name, Type, Province)", type="csv")
 
-# Load Thailand GeoJSON for land masking
-gdf_thailand = gpd.read_file("/mnt/data/provinces.geojson")
-
 if cust_file:
     try:
         cust_data = pd.read_csv(cust_file)
@@ -51,20 +46,26 @@ if cust_file:
             st.stop()
         cust_data = cust_data.dropna(subset=['Lat', 'Long'])
 
-        # Convert to GeoDataFrame
-        cust_data['geometry'] = cust_data.apply(lambda row: Point(row['Long'], row['Lat']), axis=1)
-        cust_gdf = gpd.GeoDataFrame(cust_data, geometry='geometry', crs=gdf_thailand.crs)
-
-        # Filter by spatial intersection
-        cust_gdf = cust_gdf[cust_gdf.geometry.within(gdf_thailand.unary_union)]
-        cust_data = pd.DataFrame(cust_gdf.drop(columns="geometry"))
-
     except pd.errors.EmptyDataError:
         st.error("🚫 Customer CSV file is empty or corrupted.")
         st.stop()
     except Exception as e:
         st.error(f"❌ Failed to load customer file: {e}")
         st.stop()
+
+    # Filter: only customers within Thailand bounding box
+    THAI_BOUNDING_BOX = {
+        'min_lat': 5.61,
+        'max_lat': 20.46,
+        'min_lon': 97.34,
+        'max_lon': 105.64
+    }
+    cust_data = cust_data[
+        (cust_data['Lat'] >= THAI_BOUNDING_BOX['min_lat']) &
+        (cust_data['Lat'] <= THAI_BOUNDING_BOX['max_lat']) &
+        (cust_data['Long'] >= THAI_BOUNDING_BOX['min_lon']) &
+        (cust_data['Long'] <= THAI_BOUNDING_BOX['max_lon'])
+    ]
 
     # Layer visibility controls
     show_heatmap = st.checkbox("Show Heatmap", value=True)
