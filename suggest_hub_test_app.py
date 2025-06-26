@@ -126,16 +126,7 @@ if cust_file:
         st.subheader("🚧 Suggest New Hubs Based on Radius")
         radius_threshold_km = st.slider("Set Radius Threshold from Existing Hubs (km):", 10, 500, 100)
         
-    #------------------------------------------------------------------------------------------------------------------------
-                
-        # Layer visibility controls
-        with st.expander("🧭 Layer Visibility Controls"):
-            show_heatmap = st.checkbox("Show Heatmap", value=True)
-            show_customer_markers = st.checkbox("Show Customer Markers", value=True)
-            show_existing_hubs = st.checkbox("Show Existing Hubs", value=True)
-            show_suggested_hubs = st.checkbox("Show Suggested Hubs", value=True)
-            show_hub_radius_layer = st.checkbox("Show Existing Hub Radius Zones", value=True)
-                    
+    
     #------------------------------------------------------------------------------------------------------------------------
         
         def is_outside_hubs(lat, lon):
@@ -155,6 +146,16 @@ if cust_file:
             st.subheader("🏩 New Hub Suggestions Map")
             m_new = folium.Map(location=[13.75, 100.5], zoom_start=6, control_scale=True)
             
+     #------------------------------------------------------------------------------------------------------------------------
+                
+        # Layer visibility controls
+        with st.expander("🧭 Layer Visibility Controls"):
+            show_heatmap = st.checkbox("Show Heatmap", value=True)
+            show_customer_markers = st.checkbox("Show Customer Markers", value=True)
+            show_existing_hubs = st.checkbox("Show Existing Hubs", value=True)
+            show_suggested_hubs = st.checkbox("Show Suggested Hubs", value=True)
+            show_hub_radius_layer = st.checkbox("Show Existing Hub Radius Zones", value=True)
+                           
       
     #------------------------------------------------------------------------------------------------------------------------
     
