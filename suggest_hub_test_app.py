@@ -122,6 +122,14 @@ if cust_file:
     clustering_choice = st.radio("Select clustering result to display on map:", ["KMeans", "Radius-based"])
     dc_locations = kmeans_dc_locations if clustering_choice == "KMeans" else custom_dc_locations
 
+
+    # Layer visibility controls
+    show_heatmap = st.checkbox("Show Heatmap", value=True)
+    show_province_circles = st.checkbox("Show Customer Province Circles", value=True)
+    show_customer_markers = st.checkbox("Show Customer Markers", value=True)
+    show_existing_hubs = st.checkbox("Show Existing Hubs", value=True)
+    show_suggested_hubs = st.checkbox("Show Suggested Hubs", value=True)
+
     # Create folium map
     m = folium.Map(location=[13.75, 100.5], zoom_start=6)
 
