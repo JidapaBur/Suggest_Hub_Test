@@ -200,10 +200,10 @@ if cust_file:
         
         # Suggest New Hubs for Out-of-Radius Customers
         st.subheader("🚧 Suggest New Hubs Based on Radius")
-        radius_threshold_km = st.slider("Set Radius Threshold from Existing Hubs (km):", 10, 500, 100)
+        radius_threshold_km2 = st.slider("Set Radius Threshold from Existing Hubs (km):", 10, 500, 100)
 
         def is_outside_hubs(lat, lon):
-            return all(geodesic((lat, lon), (hub_lat, hub_lon)).km > radius_threshold_km for hub_lat, hub_lon in dc_data[['Lat', 'Long']].values)
+            return all(geodesic((lat, lon), (hub_lat, hub_lon)).km > radius_threshold_km2 for hub_lat, hub_lon in dc_data[['Lat', 'Long']].values)
 
         cust_data['Outside_Hub'] = cust_data.apply(lambda row: is_outside_hubs(row['Lat'], row['Long']), axis=1)
         outside_customers = cust_data[cust_data['Outside_Hub'] == True]
