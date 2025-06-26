@@ -7,10 +7,30 @@ from sklearn.cluster import KMeans
 from geopy.distance import great_circle
 
 st.set_page_config(layout="wide")
-st.title("📦 Customer & DC Visualization Tool")
+st.title("📦 Customer & Hub Visualization Tool")
 # Footer note
 st.markdown("<div style='text-align:right; font-size:12px; color:gray;'>Developed by Jidapa Buranachan</div>", unsafe_allow_html=True)
 
+# Downloadable template section
+st.markdown("### 📥 Download Template Files")
+cust_template = pd.DataFrame(columns=["Customer_Code", "Lat", "Long", "Type", "Province"])
+dc_template = pd.DataFrame(columns=["DC_Name", "Lat", "Long", "Type", "Province"])
+
+col1, col2 = st.columns(2)
+with col1:
+    st.download_button(
+        label="⬇️ Download Customer Template",
+        data=cust_template.to_csv(index=False).encode('utf-8-sig'),
+        file_name='Customer_Template.csv',
+        mime='text/csv'
+    )
+with col2:
+    st.download_button(
+        label="⬇️ Download DC Template",
+        data=dc_template.to_csv(index=False).encode('utf-8-sig'),
+        file_name='DC_Template.csv',
+        mime='text/csv'
+    )
 
 # Upload files
 cust_file = st.file_uploader("Upload Customer File (.csv with Lat, Long, Customer_Code, Type, Province)", type="csv")
@@ -133,7 +153,7 @@ if cust_file:
     for i, (lat, lon) in enumerate(dc_locations):
         folium.Marker(
             location=[lat, lon],
-            popup=f"Suggest DC #{i+1}",
+            popup=f"Suggest Hub #{i+1}",
             icon=folium.Icon(color='green', icon='star', prefix='fa')
         ).add_to(m)
 
