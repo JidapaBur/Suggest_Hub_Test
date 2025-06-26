@@ -8,10 +8,15 @@ from sklearn.cluster import KMeans
 from geopy.distance import great_circle, geodesic
 import numpy as np
 
+#------------------------------------------------------------------------------------------------------------------------
+
 st.set_page_config(layout="wide")
 st.title("📦 Customer & Hub Visualization Tool")
 # Footer note
 st.markdown("<div style='text-align:right; font-size:12px; color:gray;'>Version 1.0.3 Developed by Jidapa Buranachan</div>", unsafe_allow_html=True)
+
+#------------------------------------------------------------------------------------------------------------------------
+
 
 # Downloadable template section
 st.markdown("### 🗅️ Download Template Files")
@@ -34,6 +39,8 @@ with col2:
         mime='text/csv'
     )
 
+#------------------------------------------------------------------------------------------------------------------------
+
 # Upload files
 cust_file = st.file_uploader("Upload Customer File (.csv with Lat, Long, Customer_Code, Type, Province)", type="csv")
 dc_file = st.file_uploader("Upload Hub File (.csv with Lat, Long, Hub_Name, Type, Province)", type="csv")
@@ -53,6 +60,8 @@ if cust_file:
         st.error(f"❌ Failed to load customer file: {e}")
         st.stop()
 
+#------------------------------------------------------------------------------------------------------------------------
+    
     # Filter: only customers within Thailand bounding box
     THAI_BOUNDING_BOX = {
         'min_lat': 5.61,
@@ -67,19 +76,16 @@ if cust_file:
         (cust_data['Long'] <= THAI_BOUNDING_BOX['max_lon'])
     ]
 
-    # Layer visibility controls
-    with st.expander("🧭 Layer Visibility Controls"):
-        show_heatmap = st.checkbox("Show Heatmap", value=True)
-        show_customer_markers = st.checkbox("Show Customer Markers", value=True)
-        show_existing_hubs = st.checkbox("Show Existing Hubs", value=True)
-        show_suggested_hubs = st.checkbox("Show Suggested Hubs", value=True)
-        show_hub_radius_layer = st.checkbox("Show Existing Hub Radius Zones", value=True)
 
+#------------------------------------------------------------------------------------------------------------------------
+    
     # Filter by Type
     customer_types = cust_data['Type'].dropna().unique().tolist()
     selected_types = st.multiselect("Filter Customer Types:", options=customer_types, default=customer_types)
     cust_data = cust_data[cust_data['Type'].isin(selected_types)]
 
+#------------------------------------------------------------------------------------------------------------------------
+    
     st.subheader("📍 Nearest Hub for Each Customer")
 
     if dc_file:
@@ -113,6 +119,18 @@ if cust_file:
         nearest_df = pd.DataFrame(results)
         st.dataframe(nearest_df)
 
+    #------------------------------------------------------------------------------------------------------------------------
+        
+        # Layer visibility controls
+        with st.expander("🧭 Layer Visibility Controls"):
+            show_heatmap = st.checkbox("Show Heatmap", value=True)
+            show_customer_markers = st.checkbox("Show Customer Markers", value=True)
+            show_existing_hubs = st.checkbox("Show Existing Hubs", value=True)
+            show_suggested_hubs = st.checkbox("Show Suggested Hubs", value=True)
+            show_hub_radius_layer = st.checkbox("Show Existing Hub Radius Zones", value=True)
+            
+    #------------------------------------------------------------------------------------------------------------------------
+        
         # Suggest New Hubs for Out-of-Radius Customers
         st.subheader("🚧 Suggest New Hubs Based on Radius")
         radius_threshold_km = st.slider("Set Radius Threshold from Existing Hubs (km):", 10, 500, 100)
@@ -134,6 +152,8 @@ if cust_file:
             st.subheader("🏩 New Hub Suggestions Map")
             m_new = folium.Map(location=[13.75, 100.5], zoom_start=6, control_scale=True)
 
+    #------------------------------------------------------------------------------------------------------------------------
+    
             # Existing hub layer
             existing_layer = FeatureGroup(name="Existing Hubs")
             for _, row in dc_data.iterrows():
@@ -204,4 +224,6 @@ if cust_file:
 
             LayerControl().add_to(m_new)
 
+        #------------------------------------------------------------------------------------------------------------------------
+            
             st_folium(m_new, width=1100, height=600, key="new_hub_map", returned_objects=[], feature_group_to_add=None, center=[13.75, 100.5], zoom=6)
