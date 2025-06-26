@@ -1,6 +1,8 @@
 streamlit
-streamlit-folium
-folium
 pandas
+folium
+streamlit-folium
 scikit-learn
 geopy
+hdbscan
+
