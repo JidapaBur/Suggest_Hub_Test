@@ -72,6 +72,7 @@ if cust_file:
     show_customer_markers = st.checkbox("Show Customer Markers", value=True)
     show_existing_hubs = st.checkbox("Show Existing Hubs", value=True)
     show_suggested_hubs = st.checkbox("Show Suggested Hubs", value=True)
+    show_hub_radius_layer = st.checkbox("Show Existing Hub Radius Zones", value=True)
 
     # Filter by Type
     customer_types = cust_data['Type'].dropna().unique().tolist()
@@ -142,6 +143,19 @@ if cust_file:
                 ).add_to(existing_layer)
             if show_existing_hubs:
                 existing_layer.add_to(m_new)
+
+            # Existing hub radius circles
+            if show_hub_radius_layer:
+                radius_layer = FeatureGroup(name="Existing Hub Radius")
+                for _, row in dc_data.iterrows():
+                    folium.Circle(
+                        location=[row['Lat'], row['Long']],
+                        radius=radius_threshold_km * 1000,
+                        color='gray',
+                        fill=False,
+                        dash_array="5"
+                    ).add_to(radius_layer)
+                radius_layer.add_to(m_new)
 
             # Outside customer layer with brand-based color
             outside_layer = FeatureGroup(name="Outside Customers")
