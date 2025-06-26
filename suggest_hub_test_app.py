@@ -114,87 +114,6 @@ if cust_file:
         st.dataframe(nearest_df)
 
 
-# Suggested hub clustering
-    st.subheader("🌐 Suggested Hub Locations (via KMeans Clustering)")
-    n_dc1 = st.slider("Select number of suggested hubs:", 1, 10, 5)
-    radius_km1 = st.slider("Radius per hub (km):", 10, 300, 100)
-    radius_m1 = radius_km1 * 1000
-
-    # Filter customers by radius around cluster centers
-    kmeans = KMeans(n_clusters=n_dc, random_state=42)
-    kmeans.fit(cust_data[['Lat', 'Long']])
-    dc_locations = kmeans.cluster_centers_
-
-    # Create folium map
-    m1 = folium.Map(location=[13.75, 100.5], zoom_start=6)
-
-    # Plot customer heatmap
-    heat_data1 = cust_data[['Lat', 'Long']].values.tolist()
-    HeatMap(heat_data1, radius=10).add_to(m1)
-
-    # Province-based Circle Visualization
-    province_counts = cust_data['Province'].value_counts()
-    for province, count in province_counts.items():
-        subset = cust_data[cust_data['Province'] == province]
-        if not subset.empty:
-            lat, lon = subset[['Lat', 'Long']].mean()
-            folium.CircleMarker(
-                location=[lat, lon],
-                radius=10 + count**0.5,
-                color='blue',
-                fill=True,
-                fill_opacity=0.5,
-                popup=f"{province}: {count} customers"
-            ).add_to(m1)
-
-    # Clustered customer markers by Type
-    customer_cluster1 = MarkerCluster(name="Customers")
-    for _, row in cust_data.iterrows():
-        type_lower = row.get('Type', '').lower()
-        icon = 'home'
-        color = 'lightblue' if type_lower == 'lotus' else 'red'
-        popup_text = f"Customer: {row['Customer_Code']} ({row.get('Type', 'Unknown')})<br>Province: {row.get('Province', 'N/A')}"
-        folium.Marker(
-            [row['Lat'], row['Long']],
-            popup=popup_text,
-            icon=folium.Icon(color=color, icon=icon, prefix='fa')
-        ).add_to(customer_cluster1)
-    m.add_child(customer_cluster1)
-
-    # Existing hubs by Type
-    if dc_file:
-        for _, row in dc_data.iterrows():
-            type_lower = row.get('Type', '').lower()
-            icon = 'store'
-            color = 'lightblue' if type_lower == 'lotus' else 'red'
-            popup_text = f"Hub: {row['Hub_Name']} ({row.get('Type', 'Unknown')})<br>Province: {row.get('Province', 'N/A')}"
-            folium.Marker(
-                [row['Lat'], row['Long']],
-                popup=popup_text,
-                icon=folium.Icon(color=color, icon=icon, prefix='fa')
-            ).add_to(m1)
-
-    # Suggested hubs with radius
-    for i, (lat, lon) in enumerate(dc_locations):
-        folium.Marker(
-            location=[lat, lon],
-            popup=f"Suggest Hub #{i+1}",
-            icon=folium.Icon(color='green', icon='star', prefix='fa')
-        ).add_to(m1)
-
-        folium.Circle(
-            location=[lat, lon],
-            radius=radius_m1,
-            color='green',
-            fill=True,
-            fill_opacity=0.1,
-            popup=f"Radius {radius_km1} km"
-        ).add_to(m1)
-
-    # Show final map
-    st.subheader("🗺️ Visualization")
-    st_folium(m1, width=1100, height=600, returned_objects=[], key="main_map")
-
     ###############################################################################
     # Suggested hub clustering
     st.subheader("🌐 Suggested Hub Locations (via KMeans Clustering)")
@@ -274,8 +193,8 @@ if cust_file:
         ).add_to(m)
 
     # Show final map
-    st.subheader("🗺️ Visualization")
-    st_folium(m, width=1100, height=600, returned_objects=[], key="main_map")
+        st.subheader("🗺️ Visualization")
+        st_folium(m, width=1100, height=600, returned_objects=[], key="main_map")
 
     ##############################################################################
         
