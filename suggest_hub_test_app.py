@@ -211,7 +211,7 @@ if cust_file:
         st.markdown(f"<b>{len(outside_customers)} customers</b> are outside the {radius_threshold_km} km range from existing hubs.", unsafe_allow_html=True)
 
         if not outside_customers.empty:
-            n_new_hubs = st.slider2("How many new hubs to suggest for uncovered areas?", 1, 10, 3)
+            n_new_hubs = st.slider("How many new hubs to suggest for uncovered areas?", 1, 10, 3)
             new_hub_kmeans = KMeans(n_clusters=n_new_hubs, random_state=42)
             new_hub_kmeans.fit(outside_customers[['Lat', 'Long']])
             new_hub_locations = new_hub_kmeans.cluster_centers_
