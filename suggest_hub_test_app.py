@@ -137,27 +137,27 @@ if cust_file:
 
     # Layer: Heatmap per brand (Lotus & Makro)
     if show_heatmap:
-    # --- แยกข้อมูลลูกค้า ---
-    lotus_data = cust_data[cust_data['Type'].str.lower() == 'lotus']
-    makro_data = cust_data[cust_data['Type'].str.lower() == 'makro']
+        # --- แยกข้อมูลลูกค้า ---
+        lotus_data = cust_data[cust_data['Type'].str.lower() == 'lotus']
+        makro_data = cust_data[cust_data['Type'].str.lower() == 'makro']
 
-    # --- Heatmap Layer: Lotus ---
-    lotus_heatmap_layer = FeatureGroup(name="Lotus Heatmap")
-    HeatMap(
-        lotus_data[['Lat', 'Long']].values.tolist(),
-        radius=10,
-        gradient={0.2: '#C5E3B7', 0.6: '#78BE20', 1: '#4C8020'}  # Green shades
-    ).add_to(lotus_heatmap_layer)
-    lotus_heatmap_layer.add_to(m)
+        # --- Heatmap Layer: Lotus ---
+        lotus_heatmap_layer = FeatureGroup(name="Lotus Heatmap")
+        HeatMap(
+            lotus_data[['Lat', 'Long']].values.tolist(),
+            radius=10,
+            gradient={0.2: '#C5E3B7', 0.6: '#78BE20', 1: '#4C8020'}  # Green shades
+        ).add_to(lotus_heatmap_layer)
+        lotus_heatmap_layer.add_to(m)
 
-    # --- Heatmap Layer: Makro ---
-    makro_heatmap_layer = FeatureGroup(name="Makro Heatmap")
-    HeatMap(
-        makro_data[['Lat', 'Long']].values.tolist(),
-        radius=10,
-        gradient={0.2: '#F9C3C3', 0.6: '#ED1C24', 1: '#A10B0B'}  # Red shades
-    ).add_to(makro_heatmap_layer)
-    makro_heatmap_layer.add_to(m)
+        # --- Heatmap Layer: Makro ---
+        makro_heatmap_layer = FeatureGroup(name="Makro Heatmap")
+        HeatMap(
+            makro_data[['Lat', 'Long']].values.tolist(),
+            radius=10,
+            gradient={0.2: '#F9C3C3', 0.6: '#ED1C24', 1: '#A10B0B'}  # Red shades
+        ).add_to(makro_heatmap_layer)
+        makro_heatmap_layer.add_to(m)
 
 
     # Province-based Circle Visualization
