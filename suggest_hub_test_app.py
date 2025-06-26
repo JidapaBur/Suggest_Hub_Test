@@ -10,7 +10,7 @@ from geopy.distance import great_circle
 st.set_page_config(layout="wide")
 st.title("📦 Customer & Hub Visualization Tool")
 # Footer note
-st.markdown("<div style='text-align:right; font-size:12px; color:gray;'>Developed by Jidapa Buranachan</div>", unsafe_allow_html=True)
+st.markdown("<div style='text-align:right; font-size:12px; color:gray;'>Version 1.0.2 Developed by Jidapa Buranachan</div>", unsafe_allow_html=True)
 
 # Downloadable template section
 st.markdown("### 📥 Download Template Files")
@@ -91,22 +91,36 @@ if cust_file:
         nearest_df = pd.DataFrame(results)
         st.dataframe(nearest_df)
 
-    # Suggested hub clustering
-    st.subheader("🌐 Suggested Hub Locations (via KMeans Clustering)")
-    n_dc = st.slider("Select number of suggested hubs:", 1, 10, 5)
-    radius_km = st.slider("Radius per hub (km):", 10, 300, 100)
-    radius_m = radius_km * 1000
-
-    show_heatmap = st.checkbox("Show Heatmap", value=True)
-    show_province_circles = st.checkbox("Show Customer Province Circles", value=True)
-    show_customer_markers = st.checkbox("Show Customer Markers", value=True)
-    show_existing_hubs = st.checkbox("Show Existing Hubs", value=True)
-    show_suggested_hubs = st.checkbox("Show Suggested Hubs", value=True)
-
-    # Filter customers by radius around cluster centers
+    # Suggested hub clustering (KMeans)
+    st.subheader("🌐 Suggested Hub Locations (KMeans)")
+    n_dc = st.slider("Select number of suggested hubs (KMeans):", 1, 10, 5)
     kmeans = KMeans(n_clusters=n_dc, random_state=42)
     kmeans.fit(cust_data[['Lat', 'Long']])
-    dc_locations = kmeans.cluster_centers_
+    kmeans_dc_locations = kmeans.cluster_centers_
+
+    # Radius-based Hub Suggestion (separate logic)
+    st.subheader("🧭 Radius-based Hub Grouping (DBSCAN-like)")
+    radius_km = st.slider("Radius per hub (km):", 10, 300, 100, key="radius_custom")
+    radius_m = radius_km * 1000
+
+    from geopy.distance import geodesic
+    import numpy as np
+
+    custom_dc_locations = []
+    unassigned = cust_data.copy()
+    while not unassigned.empty:
+        center = unassigned[['Lat', 'Long']].iloc[0].values
+        in_radius = unassigned.apply(
+            lambda row: geodesic(center, (row['Lat'], row['Long'])).km <= radius_km,
+            axis=1
+        )
+        group = unassigned[in_radius]
+        custom_dc_locations.append(group[['Lat', 'Long']].mean().values)
+        unassigned = unassigned[~in_radius]
+
+    # Choose one for map rendering (KMeans or custom)
+    clustering_choice = st.radio("Select clustering result to display on map:", ["KMeans", "Radius-based"])
+    dc_locations = kmeans_dc_locations if clustering_choice == "KMeans" else custom_dc_locations
 
     # Create folium map
     m = folium.Map(location=[13.75, 100.5], zoom_start=6)
@@ -207,3 +221,4 @@ if cust_file:
     # Show final map
     st.subheader("🗺️ Visualization")
     st_folium(m, width=1100, height=600, returned_objects=[], key="main_map")
+
