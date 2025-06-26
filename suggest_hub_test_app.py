@@ -100,7 +100,7 @@ if cust_file:
 
     # Radius-based Hub Suggestion (separate logic)
     st.subheader("🧭 Radius-based Hub Grouping (DBSCAN-like)")
-    radius_km = st.slider("Radius per hub (km):", 10, 300, 100, key="radius_custom")
+    radius_km = st.slider("Radius per hub (km):", 10, 500, 100, key="radius_custom")
     radius_m = radius_km * 1000
 
     from geopy.distance import geodesic
