@@ -52,12 +52,7 @@ if cust_file:
         st.error(f"❌ Failed to load customer file: {e}")
         st.stop()
 
-    # Layer visibility controls
-    show_heatmap = st.checkbox("Show Heatmap", value=True)
-    show_province_circles = st.checkbox("Show Customer Province Circles", value=True)
-    show_customer_markers = st.checkbox("Show Customer Markers", value=True)
-    show_existing_hubs = st.checkbox("Show Existing Hubs", value=True)
-    show_suggested_hubs = st.checkbox("Show Suggested Hubs", value=True)
+
 
     # Filter by Type
     customer_types = cust_data['Type'].dropna().unique().tolist()
@@ -97,6 +92,7 @@ if cust_file:
         nearest_df = pd.DataFrame(results)
         st.dataframe(nearest_df)
 
+
         # Suggest New Hubs for Out-of-Radius Customers
         st.subheader("🚧 Suggest New Hubs Based on Radius")
         radius_threshold_km = st.slider("Set Radius Threshold from Existing Hubs (km):", 10, 500, 100)
@@ -129,6 +125,13 @@ if cust_file:
             if show_existing_hubs:
                 existing_layer.add_to(m_new)
 
+
+        # Layer visibility controls
+        show_heatmap = st.checkbox("Show Heatmap", value=True)
+        show_customer_markers = st.checkbox("Show Customer Markers", value=True)
+        show_existing_hubs = st.checkbox("Show Existing Hubs", value=True)
+        show_suggested_hubs = st.checkbox("Show Suggested Hubs", value=True)
+            
             # Outside customer layer with brand-based color
             outside_layer = FeatureGroup(name="Outside Customers")
             for _, row in outside_customers.iterrows():
