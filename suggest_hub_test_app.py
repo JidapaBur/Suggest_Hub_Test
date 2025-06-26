@@ -132,7 +132,7 @@ if cust_file:
             # Outside customer layer with brand-based color
             outside_layer = FeatureGroup(name="Outside Customers")
             for _, row in outside_customers.iterrows():
-                color = 'red' if row.get('Type', '').lower() == 'makro' else 'lightblue'
+                color = 'red' if row.get('Type', '').lower() == 'makro' else 'blue'
                 folium.CircleMarker(
                     location=[row['Lat'], row['Long']],
                     radius=5,
@@ -163,7 +163,7 @@ if cust_file:
             if show_suggested_hubs:
                 suggest_layer.add_to(m_new)
 
-            # Combined heatmap (single color tone)
+            # Combined heatmap
             if show_heatmap:
                 heatmap_layer = FeatureGroup(name="Customer Heatmap")
                 HeatMap(
