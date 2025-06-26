@@ -10,7 +10,7 @@ from geopy.distance import great_circle
 st.set_page_config(layout="wide")
 st.title("📦 Customer & Hub Visualization Tool")
 # Footer note
-st.markdown("<div style='text-align:right; font-size:12px; color:gray;'>Developed by Jidapa Buranachan</div>", unsafe_allow_html=True)
+st.markdown("<div style='text-align:right; font-size:12px; color:gray;'>Version 1.0.2 Developed by Jidapa Buranachan</div>", unsafe_allow_html=True)
 
 # Downloadable template section
 st.markdown("### 📥 Download Template Files")
@@ -120,6 +120,18 @@ if cust_file:
         subset = cust_data[cust_data['Province'] == province]
         if not subset.empty:
             lat, lon = subset[['Lat', 'Long']].mean()
+            # Dynamic popup listing first few customer codes
+            sample_customers = subset['Customer_Code'].head(5).tolist()
+            sample_text = '<br>'.join(sample_customers)
+            full_popup = f"<b>{province}</b>: {count} customers<br><hr><b>Sample:</b><br>{sample_text}"
+            folium.CircleMarker(
+                location=[lat, lon],
+                radius=10 + count**0.5,
+                color='blue',
+                fill=True,
+                fill_opacity=0.5,
+                popup=folium.Popup(full_popup, max_width=250)
+            ).add_to(province_layer)
             folium.CircleMarker(
                 location=[lat, lon],
                 radius=10 + count**0.5,
