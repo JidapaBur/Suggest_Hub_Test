@@ -7,6 +7,8 @@ from streamlit_folium import st_folium
 from sklearn.cluster import KMeans
 from geopy.distance import great_circle, geodesic
 import numpy as np
+import geopandas as gpd
+from shapely.geometry import Point
 
 st.set_page_config(layout="wide")
 st.title("📦 Customer & Hub Visualization Tool")
@@ -37,6 +39,7 @@ with col2:
 # Upload files
 cust_file = st.file_uploader("Upload Customer File (.csv with Lat, Long, Customer_Code, Type, Province)", type="csv")
 dc_file = st.file_uploader("Upload Hub File (.csv with Lat, Long, Hub_Name, Type, Province)", type="csv")
+land_geojson = st.file_uploader("Upload Thailand Land GeoJSON (to filter water areas)", type=["geojson"])
 
 if cust_file:
     try:
@@ -52,7 +55,12 @@ if cust_file:
         st.error(f"❌ Failed to load customer file: {e}")
         st.stop()
 
-
+    # Layer visibility controls
+    show_heatmap = st.checkbox("Show Heatmap", value=True)
+    show_province_circles = st.checkbox("Show Customer Province Circles", value=True)
+    show_customer_markers = st.checkbox("Show Customer Markers", value=True)
+    show_existing_hubs = st.checkbox("Show Existing Hubs", value=True)
+    show_suggested_hubs = st.checkbox("Show Suggested Hubs", value=True)
 
     # Filter by Type
     customer_types = cust_data['Type'].dropna().unique().tolist()
@@ -92,7 +100,6 @@ if cust_file:
         nearest_df = pd.DataFrame(results)
         st.dataframe(nearest_df)
 
-
         # Suggest New Hubs for Out-of-Radius Customers
         st.subheader("🚧 Suggest New Hubs Based on Radius")
         radius_threshold_km = st.slider("Set Radius Threshold from Existing Hubs (km):", 10, 500, 100)
@@ -109,7 +116,18 @@ if cust_file:
             n_new_hubs = st.slider("How many new hubs to suggest for uncovered areas?", 1, 10, 3)
             new_hub_kmeans = KMeans(n_clusters=n_new_hubs, random_state=42)
             new_hub_kmeans.fit(outside_customers[['Lat', 'Long']])
-            new_hub_locations = new_hub_kmeans.cluster_centers_
+            raw_new_hub_locations = new_hub_kmeans.cluster_centers_
+
+            # Optional: Filter hub locations using land boundary
+            if land_geojson:
+                land_gdf = gpd.read_file(land_geojson)
+                hub_points = [Point(lon, lat) for lat, lon in raw_new_hub_locations]
+                hub_gdf = gpd.GeoDataFrame(geometry=hub_points, crs="EPSG:4326")
+                hub_gdf['on_land'] = hub_gdf.within(land_gdf.unary_union)
+                hub_gdf = hub_gdf[hub_gdf['on_land'] == True]
+                new_hub_locations = [(pt.y, pt.x) for pt in hub_gdf.geometry]
+            else:
+                new_hub_locations = raw_new_hub_locations
 
             st.subheader("🧭 New Hub Suggestions Map")
             m_new = folium.Map(location=[13.75, 100.5], zoom_start=6, control_scale=True)
@@ -125,7 +143,6 @@ if cust_file:
             if show_existing_hubs:
                 existing_layer.add_to(m_new)
 
-            
             # Outside customer layer with brand-based color
             outside_layer = FeatureGroup(name="Outside Customers")
             for _, row in outside_customers.iterrows():
@@ -171,4 +188,4 @@ if cust_file:
                 heatmap_layer.add_to(m_new)
 
             LayerControl().add_to(m_new)
-            st_folium(m_new, width=1100, height=600, key="new_hub_map", returned_objects=[], feature_group_to_add=None, center=[13.75, 100.5], zoom=6)
+            st_folium(m_new, width=1100, height=600, key="new_hub_map", returned_objects=[], feature_group_to_add=None, center=[13.75,
