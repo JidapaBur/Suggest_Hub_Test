@@ -84,11 +84,26 @@ if cust_file:
     heat_data = cust_data[['Lat', 'Long']].values.tolist()
     HeatMap(heat_data, radius=10).add_to(m)
 
+    # Province-based Circle Visualization
+    province_counts = cust_data['Province'].value_counts()
+    for province, count in province_counts.items():
+        subset = cust_data[cust_data['Province'] == province]
+        if not subset.empty:
+            lat, lon = subset[['Lat', 'Long']].mean()
+            folium.CircleMarker(
+                location=[lat, lon],
+                radius=10 + count**0.5,
+                color='blue',
+                fill=True,
+                fill_opacity=0.5,
+                popup=f"{province}: {count} customers"
+            ).add_to(m)
+
     # Clustered customer markers by Type
     customer_cluster = MarkerCluster(name="Customers")
     for _, row in cust_data.iterrows():
         type_lower = row.get('Type', '').lower()
-        icon = 'home' if type_lower == 'lotus' else 'home'
+        icon = 'home'
         color = 'lightblue' if type_lower == 'lotus' else 'red'
         popup_text = f"Customer: {row['Customer_Code']} ({row.get('Type', 'Unknown')})<br>Province: {row.get('Province', 'N/A')}"
         folium.Marker(
@@ -102,7 +117,7 @@ if cust_file:
     if dc_file:
         for _, row in dc_data.iterrows():
             type_lower = row.get('Type', '').lower()
-            icon = 'store' if type_lower == 'lotus' else 'store'
+            icon = 'store'
             color = 'lightblue' if type_lower == 'lotus' else 'red'
             popup_text = f"DC: {row['DC_Name']} ({row.get('Type', 'Unknown')})<br>Province: {row.get('Province', 'N/A')}"
             folium.Marker(
