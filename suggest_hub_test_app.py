@@ -11,7 +11,7 @@ import numpy as np
 #------------------------------------------------------------------------------------------------------------------------
 
 st.set_page_config(layout="wide")
-st.title("📦 Customer & Hub Visualization Tool")
+st.title("Customer & Hub Visualization Tool")
 # Footer note
 st.markdown("<div style='text-align:right; font-size:12px; color:gray;'>Version 1.0.3 Developed by Jidapa Buranachan</div>", unsafe_allow_html=True)
 
@@ -19,7 +19,7 @@ st.markdown("<div style='text-align:right; font-size:12px; color:gray;'>Version 
 
 
 # Downloadable template section
-st.markdown("### 🗅️ Download Template Files")
+st.markdown("### Download Template Files")
 cust_template = pd.DataFrame(columns=["Customer_Code", "Lat", "Long", "Type", "Province"])
 dc_template = pd.DataFrame(columns=["Hub_Name", "Lat", "Long", "Type", "Province"])
 
@@ -165,7 +165,7 @@ if cust_file:
                 folium.Marker(
                     location=[row['Lat'], row['Long']],
                     popup=row['Hub_Name'],
-                    icon=folium.Icon(color = 'red' if row.get('Type', '').lower() == 'makro' else 'blue')
+                    icon=folium.Icon(color = 'red' if row.get('Type', '').lower() == 'makro' else 'blue', icon='store', prefix='fa')
                 ).add_to(existing_layer)
             if show_existing_hubs:
                 existing_layer.add_to(m_new)
