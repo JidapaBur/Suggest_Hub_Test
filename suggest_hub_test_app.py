@@ -133,12 +133,32 @@ if cust_file:
     # Create folium map
     m = folium.Map(location=[13.75, 100.5], zoom_start=6)
 
-    # Layer: Heatmap
-    heatmap_layer = FeatureGroup(name="Heatmap")
+    
+
+    # Layer: Heatmap per brand (Lotus & Makro)
     if show_heatmap:
-        HeatMap(cust_data[['Lat', 'Long']].values.tolist(), radius=10).add_to(heatmap_layer)
-    if show_heatmap:
-        heatmap_layer.add_to(m)
+    # --- แยกข้อมูลลูกค้า ---
+    lotus_data = cust_data[cust_data['Type'].str.lower() == 'lotus']
+    makro_data = cust_data[cust_data['Type'].str.lower() == 'makro']
+
+    # --- Heatmap Layer: Lotus ---
+    lotus_heatmap_layer = FeatureGroup(name="Lotus Heatmap")
+    HeatMap(
+        lotus_data[['Lat', 'Long']].values.tolist(),
+        radius=10,
+        gradient={0.2: '#C5E3B7', 0.6: '#78BE20', 1: '#4C8020'}  # Green shades
+    ).add_to(lotus_heatmap_layer)
+    lotus_heatmap_layer.add_to(m)
+
+    # --- Heatmap Layer: Makro ---
+    makro_heatmap_layer = FeatureGroup(name="Makro Heatmap")
+    HeatMap(
+        makro_data[['Lat', 'Long']].values.tolist(),
+        radius=10,
+        gradient={0.2: '#F9C3C3', 0.6: '#ED1C24', 1: '#A10B0B'}  # Red shades
+    ).add_to(makro_heatmap_layer)
+    makro_heatmap_layer.add_to(m)
+
 
     # Province-based Circle Visualization
     province_layer = FeatureGroup(name="Customer Circles")
