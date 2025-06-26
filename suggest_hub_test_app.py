@@ -8,21 +8,13 @@ from sklearn.cluster import KMeans
 from geopy.distance import great_circle, geodesic
 import numpy as np
 
-# Try importing geopandas
-try:
-    import geopandas as gpd
-    from shapely.geometry import Point
-    geopandas_available = True
-except ImportError:
-    geopandas_available = False
-
 st.set_page_config(layout="wide")
 st.title("📦 Customer & Hub Visualization Tool")
 # Footer note
 st.markdown("<div style='text-align:right; font-size:12px; color:gray;'>Version 1.0.3 Developed by Jidapa Buranachan</div>", unsafe_allow_html=True)
 
 # Downloadable template section
-st.markdown("### 📥 Download Template Files")
+st.markdown("### 📅 Download Template Files")
 cust_template = pd.DataFrame(columns=["Customer_Code", "Lat", "Long", "Type", "Province"])
 dc_template = pd.DataFrame(columns=["Hub_Name", "Lat", "Long", "Type", "Province"])
 
@@ -45,7 +37,6 @@ with col2:
 # Upload files
 cust_file = st.file_uploader("Upload Customer File (.csv with Lat, Long, Customer_Code, Type, Province)", type="csv")
 dc_file = st.file_uploader("Upload Hub File (.csv with Lat, Long, Hub_Name, Type, Province)", type="csv")
-land_geojson = st.file_uploader("Upload Thailand Land GeoJSON (to filter water areas)", type=["geojson"])
 
 if cust_file:
     try:
@@ -63,7 +54,6 @@ if cust_file:
 
     # Layer visibility controls
     show_heatmap = st.checkbox("Show Heatmap", value=True)
-    show_province_circles = st.checkbox("Show Customer Province Circles", value=True)
     show_customer_markers = st.checkbox("Show Customer Markers", value=True)
     show_existing_hubs = st.checkbox("Show Existing Hubs", value=True)
     show_suggested_hubs = st.checkbox("Show Suggested Hubs", value=True)
@@ -122,20 +112,9 @@ if cust_file:
             n_new_hubs = st.slider("How many new hubs to suggest for uncovered areas?", 1, 10, 3)
             new_hub_kmeans = KMeans(n_clusters=n_new_hubs, random_state=42)
             new_hub_kmeans.fit(outside_customers[['Lat', 'Long']])
-            raw_new_hub_locations = new_hub_kmeans.cluster_centers_
+            new_hub_locations = new_hub_kmeans.cluster_centers_
 
-            # Optional: Filter hub locations using land boundary if available and geopandas is installed
-            if land_geojson and geopandas_available:
-                land_gdf = gpd.read_file(land_geojson)
-                hub_points = [Point(lon, lat) for lat, lon in raw_new_hub_locations]
-                hub_gdf = gpd.GeoDataFrame(geometry=hub_points, crs="EPSG:4326")
-                hub_gdf['on_land'] = hub_gdf.within(land_gdf.unary_union)
-                hub_gdf = hub_gdf[hub_gdf['on_land'] == True]
-                new_hub_locations = [(pt.y, pt.x) for pt in hub_gdf.geometry]
-            else:
-                new_hub_locations = raw_new_hub_locations
-
-            st.subheader("🧭 New Hub Suggestions Map")
+            st.subheader("🛍️ New Hub Suggestions Map")
             m_new = folium.Map(location=[13.75, 100.5], zoom_start=6, control_scale=True)
 
             # Existing hub layer
@@ -175,7 +154,7 @@ if cust_file:
                 folium.Circle(
                     location=[lat, lon],
                     radius=radius_threshold_km * 1000,
-                    color='purple',
+                    color='darkgreen',
                     fill=True,
                     fill_opacity=0.1,
                     popup=f"Radius {radius_threshold_km} km"
@@ -189,7 +168,7 @@ if cust_file:
                 HeatMap(
                     cust_data[['Lat', 'Long']].values.tolist(),
                     radius=10,
-                    gradient={0.2: '#FFE5B4', 0.6: '#FFA500', 1: '#FF8C00'}  # Orange shades
+                    gradient={0.2: '#FFE5B4', 0.6: '#FFA500', 1: '#FF8C00'}
                 ).add_to(heatmap_layer)
                 heatmap_layer.add_to(m_new)
 
