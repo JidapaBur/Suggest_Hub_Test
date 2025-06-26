@@ -130,4 +130,4 @@ if cust_file:
 
     # Show final map
     st.subheader("🗺️ Visualization")
-    st_folium(m, width=1100, height=600)
+    st_folium(m, width=1100, height=600, returned_objects=[], key="main_map")
