@@ -103,7 +103,6 @@ if cust_file:
         st.markdown(f"<b>{len(outside_customers)} customers</b> are outside the {radius_threshold_km} km range from existing hubs.", unsafe_allow_html=True)
 
         if not outside_customers.empty:
-            # KMeans for new hub suggestion based on outside customers
             n_new_hubs = st.slider("How many new hubs to suggest for uncovered areas?", 1, 10, 3)
             new_hub_kmeans = KMeans(n_clusters=n_new_hubs, random_state=42)
             new_hub_kmeans.fit(outside_customers[['Lat', 'Long']])
@@ -111,12 +110,38 @@ if cust_file:
 
             st.subheader("🧭 New Hub Suggestions Map")
             m_new = folium.Map(location=[13.75, 100.5], zoom_start=6)
+
+            # Existing hub layer
+            existing_layer = FeatureGroup(name="Existing Hubs")
+            for _, row in dc_data.iterrows():
+                folium.Marker(
+                    location=[row['Lat'], row['Long']],
+                    popup=row['Hub_Name'],
+                    icon=folium.Icon(color='blue', icon='store', prefix='fa')
+                ).add_to(existing_layer)
+            existing_layer.add_to(m_new)
+
+            # Outside customer layer
+            outside_layer = FeatureGroup(name="Outside Customers")
+            for _, row in outside_customers.iterrows():
+                folium.CircleMarker(
+                    location=[row['Lat'], row['Long']],
+                    radius=5,
+                    color='red',
+                    fill=True,
+                    fill_opacity=0.5,
+                    popup=row['Customer_Code']
+                ).add_to(outside_layer)
+            outside_layer.add_to(m_new)
+
+            # Suggested hub layer
+            suggest_layer = FeatureGroup(name="Suggested New Hubs")
             for i, (lat, lon) in enumerate(new_hub_locations):
                 folium.Marker(
                     location=[lat, lon],
                     popup=f"Suggest New Hub #{i+1}",
                     icon=folium.Icon(color='purple', icon='star', prefix='fa')
-                ).add_to(m_new)
+                ).add_to(suggest_layer)
                 folium.Circle(
                     location=[lat, lon],
                     radius=radius_threshold_km * 1000,
@@ -124,6 +149,9 @@ if cust_file:
                     fill=True,
                     fill_opacity=0.1,
                     popup=f"Radius {radius_threshold_km} km"
-                ).add_to(m_new)
+                ).add_to(suggest_layer)
+            suggest_layer.add_to(m_new)
+
+            LayerControl().add_to(m_new)
             st_folium(m_new, width=1100, height=600, key="new_hub_map")
 
