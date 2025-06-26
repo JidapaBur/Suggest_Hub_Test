@@ -132,7 +132,7 @@ if cust_file:
             # Outside customer layer with brand-based color
             outside_layer = FeatureGroup(name="Outside Customers")
             for _, row in outside_customers.iterrows():
-                color = 'red' if row.get('Type', '').lower() == 'makro' else 'lightblue'
+                color = 'red' if row.get('Type', '').lower() == 'makro' else 'blue'
                 folium.CircleMarker(
                     location=[row['Lat'], row['Long']],
                     radius=5,
@@ -169,7 +169,7 @@ if cust_file:
                 HeatMap(
                     cust_data[['Lat', 'Long']].values.tolist(),
                     radius=10,
-                    gradient={0.2: '#E2F0CB', 0.6: '#86C166', 1: '#275D38'}
+                    gradient={0.2: '#FFE5B4', 0.6: '#FFA500', 1: '#FF8C00'}  # Orange shades
                 ).add_to(heatmap_layer)
                 heatmap_layer.add_to(m_new)
 
