@@ -165,7 +165,7 @@ if cust_file:
                 folium.Marker(
                     location=[row['Lat'], row['Long']],
                     popup=row['Hub_Name'],
-                    icon=folium.Icon(color='blue', icon='store', prefix='fa')
+                    icon=folium.Icon(color = 'red' if row.get('Type', '').lower() == 'makro' else 'blue')
                 ).add_to(existing_layer)
             if show_existing_hubs:
                 existing_layer.add_to(m_new)
