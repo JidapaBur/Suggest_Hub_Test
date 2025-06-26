@@ -123,7 +123,7 @@ if cust_file:
     #------------------------------------------------------------------------------------------------------------------------
         
         # Suggest New Hubs for Out-of-Radius Customers
-        st.subheader("🚧 Suggest New Hubs Based on Radius")
+        st.subheader("Suggest New Hubs Based on Radius & Existing Hubs")
         radius_threshold_km = st.slider("Set Radius Threshold from Existing Hubs (km):", 10, 500, 100)
         
     
@@ -143,7 +143,7 @@ if cust_file:
             new_hub_kmeans.fit(outside_customers[['Lat', 'Long']])
             new_hub_locations = new_hub_kmeans.cluster_centers_
 
-            st.subheader("🏩 New Hub Suggestions Map")
+            st.subheader("New Hub Suggestions Map")
             m_new = folium.Map(location=[13.75, 100.5], zoom_start=6, control_scale=True)
             
      #------------------------------------------------------------------------------------------------------------------------
@@ -204,7 +204,7 @@ if cust_file:
                 folium.Marker(
                     location=[lat, lon],
                     popup=f"Suggest New Hub #{i+1}",
-                    icon=folium.Icon(color='purple', icon='star', prefix='fa')
+                    icon=folium.Icon(color='darkgreen', icon='star', prefix='fa')
                 ).add_to(suggest_layer)
                 folium.Circle(
                     location=[lat, lon],
