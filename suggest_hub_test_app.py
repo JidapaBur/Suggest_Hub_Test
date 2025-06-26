@@ -6,6 +6,7 @@ from folium.plugins import HeatMap, MarkerCluster
 from streamlit_folium import st_folium
 from sklearn.cluster import KMeans
 from geopy.distance import great_circle
+import hdbscan
 
 st.set_page_config(layout="wide")
 st.title("📦 Customer & Hub Visualization Tool")
@@ -101,8 +102,6 @@ if cust_file:
     # HDBSCAN-based Hub Suggestion
     st.subheader("🧭 Radius-based Hub Grouping (HDBSCAN)")
     min_cluster_size = st.slider("Minimum cluster size:", 2, 50, 10)
-
-    import hdbscan
     clusterer = hdbscan.HDBSCAN(min_cluster_size=min_cluster_size)
     hdb_labels = clusterer.fit_predict(cust_data[['Lat', 'Long']])
 
@@ -115,35 +114,8 @@ if cust_file:
         center = cluster_points[['Lat', 'Long']].mean().values
         hdbscan_centers.append(center)
 
-# ---------------------------
-# 🗺️ KMeans Visualization
-# ---------------------------
-st.subheader("🗺️ KMeans Hub Visualization")
-m_kmeans = folium.Map(location=[13.75, 100.5], zoom_start=6)
-for i, (lat, lon) in enumerate(kmeans_dc_locations):
-    folium.Marker(
-        location=[lat, lon],
-        popup=f"KMeans Hub #{i+1}",
-        icon=folium.Icon(color='blue', icon='star', prefix='fa')
-    ).add_to(m_kmeans)
-st_folium(m_kmeans, width=1100, height=400, key="map_kmeans")
-
-# ---------------------------
-# 🧭 HDBSCAN Visualization
-# ---------------------------
-st.subheader("🧭 HDBSCAN Hub Visualization")
-m_hdbscan = folium.Map(location=[13.75, 100.5], zoom_start=6)
-for i, (lat, lon) in enumerate(hdbscan_centers):
-    folium.Marker(
-        location=[lat, lon],
-        popup=f"HDBSCAN Hub #{i+1}",
-        icon=folium.Icon(color='green', icon='star', prefix='fa')
-    ).add_to(m_hdbscan)
-st_folium(m_hdbscan, width=1100, height=400, key="map_hdbscan")
-
-
     # Create folium map for KMeans
-    st.subheader("🗺️ KMeans Visualization")
+    st.subheader("🗺️ KMeans Hub Visualization")
     m_kmeans = folium.Map(location=[13.75, 100.5], zoom_start=6)
     for i, (lat, lon) in enumerate(kmeans_dc_locations):
         folium.Marker(
@@ -154,7 +126,7 @@ st_folium(m_hdbscan, width=1100, height=400, key="map_hdbscan")
     st_folium(m_kmeans, width=1100, height=400, key="map_kmeans")
 
     # Create folium map for HDBSCAN
-    st.subheader("🗺️ HDBSCAN Visualization")
+    st.subheader("🧭 HDBSCAN Hub Visualization")
     m_hdbscan = folium.Map(location=[13.75, 100.5], zoom_start=6)
     for i, (lat, lon) in enumerate(hdbscan_centers):
         folium.Marker(
@@ -163,8 +135,3 @@ st_folium(m_hdbscan, width=1100, height=400, key="map_hdbscan")
             icon=folium.Icon(color='green', icon='star', prefix='fa')
         ).add_to(m_hdbscan)
     st_folium(m_hdbscan, width=1100, height=400, key="map_hdbscan")
-    LayerControl().add_to(m)
-
-    # Show final map
-    st.subheader("🗺️ Visualization")
-    st_folium(m, width=1100, height=600, returned_objects=[], key="main_map")
