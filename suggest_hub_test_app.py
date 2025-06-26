@@ -7,8 +7,14 @@ from streamlit_folium import st_folium
 from sklearn.cluster import KMeans
 from geopy.distance import great_circle, geodesic
 import numpy as np
-import geopandas as gpd
-from shapely.geometry import Point
+
+# Try importing geopandas
+try:
+    import geopandas as gpd
+    from shapely.geometry import Point
+    geopandas_available = True
+except ImportError:
+    geopandas_available = False
 
 st.set_page_config(layout="wide")
 st.title("📦 Customer & Hub Visualization Tool")
@@ -118,8 +124,8 @@ if cust_file:
             new_hub_kmeans.fit(outside_customers[['Lat', 'Long']])
             raw_new_hub_locations = new_hub_kmeans.cluster_centers_
 
-            # Optional: Filter hub locations using land boundary
-            if land_geojson:
+            # Optional: Filter hub locations using land boundary if available and geopandas is installed
+            if land_geojson and geopandas_available:
                 land_gdf = gpd.read_file(land_geojson)
                 hub_points = [Point(lon, lat) for lat, lon in raw_new_hub_locations]
                 hub_gdf = gpd.GeoDataFrame(geometry=hub_points, crs="EPSG:4326")
