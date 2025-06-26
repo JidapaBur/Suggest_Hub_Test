@@ -14,7 +14,7 @@ st.title("📦 Customer & Hub Visualization Tool")
 st.markdown("<div style='text-align:right; font-size:12px; color:gray;'>Version 1.0.3 Developed by Jidapa Buranachan</div>", unsafe_allow_html=True)
 
 # Downloadable template section
-st.markdown("### 📅 Download Template Files")
+st.markdown("### 🗕️ Download Template Files")
 cust_template = pd.DataFrame(columns=["Customer_Code", "Lat", "Long", "Type", "Province"])
 dc_template = pd.DataFrame(columns=["Hub_Name", "Lat", "Long", "Type", "Province"])
 
@@ -45,6 +45,9 @@ if cust_file:
             st.error("🚫 Customer CSV file is empty. Please upload a file with data.")
             st.stop()
         cust_data = cust_data.dropna(subset=['Lat', 'Long'])
+        # Filter out coordinates outside Thailand roughly (5 to 21 lat, 97 to 106 long)
+        cust_data = cust_data[(cust_data['Lat'] >= 5) & (cust_data['Lat'] <= 21) &
+                              (cust_data['Long'] >= 97) & (cust_data['Long'] <= 106)]
     except pd.errors.EmptyDataError:
         st.error("🚫 Customer CSV file is empty or corrupted.")
         st.stop()
@@ -114,7 +117,7 @@ if cust_file:
             new_hub_kmeans.fit(outside_customers[['Lat', 'Long']])
             new_hub_locations = new_hub_kmeans.cluster_centers_
 
-            st.subheader("🛍️ New Hub Suggestions Map")
+            st.subheader("🏩 New Hub Suggestions Map")
             m_new = folium.Map(location=[13.75, 100.5], zoom_start=6, control_scale=True)
 
             # Existing hub layer
@@ -173,4 +176,5 @@ if cust_file:
                 heatmap_layer.add_to(m_new)
 
             LayerControl().add_to(m_new)
+
             st_folium(m_new, width=1100, height=600, key="new_hub_map", returned_objects=[], feature_group_to_add=None, center=[13.75, 100.5], zoom=6)
