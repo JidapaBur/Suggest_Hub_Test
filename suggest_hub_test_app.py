@@ -125,12 +125,6 @@ if cust_file:
             if show_existing_hubs:
                 existing_layer.add_to(m_new)
 
-
-        # Layer visibility controls
-        show_heatmap = st.checkbox("Show Heatmap", value=True)
-        show_customer_markers = st.checkbox("Show Customer Markers", value=True)
-        show_existing_hubs = st.checkbox("Show Existing Hubs", value=True)
-        show_suggested_hubs = st.checkbox("Show Suggested Hubs", value=True)
             
             # Outside customer layer with brand-based color
             outside_layer = FeatureGroup(name="Outside Customers")
