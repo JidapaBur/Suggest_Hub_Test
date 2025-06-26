@@ -116,9 +116,9 @@ if cust_file:
 
 # Suggested hub clustering
     st.subheader("🌐 Suggested Hub Locations (via KMeans Clustering)")
-    n_dc = st.slider("Select number of suggested hubs:", 1, 10, 5)
-    radius_km = st.slider("Radius per hub (km):", 10, 300, 100)
-    radius_m = radius_km * 1000
+    n_dc1 = st.slider("Select number of suggested hubs:", 1, 10, 5)
+    radius_km1 = st.slider("Radius per hub (km):", 10, 300, 100)
+    radius_m1 = radius_km1 * 1000
 
     # Filter customers by radius around cluster centers
     kmeans = KMeans(n_clusters=n_dc, random_state=42)
@@ -126,11 +126,11 @@ if cust_file:
     dc_locations = kmeans.cluster_centers_
 
     # Create folium map
-    m = folium.Map(location=[13.75, 100.5], zoom_start=6)
+    m1 = folium.Map(location=[13.75, 100.5], zoom_start=6)
 
     # Plot customer heatmap
-    heat_data = cust_data[['Lat', 'Long']].values.tolist()
-    HeatMap(heat_data, radius=10).add_to(m)
+    heat_data1 = cust_data[['Lat', 'Long']].values.tolist()
+    HeatMap(heat_data1, radius=10).add_to(m1)
 
     # Province-based Circle Visualization
     province_counts = cust_data['Province'].value_counts()
@@ -145,10 +145,10 @@ if cust_file:
                 fill=True,
                 fill_opacity=0.5,
                 popup=f"{province}: {count} customers"
-            ).add_to(m)
+            ).add_to(m1)
 
     # Clustered customer markers by Type
-    customer_cluster = MarkerCluster(name="Customers")
+    customer_cluster1 = MarkerCluster(name="Customers")
     for _, row in cust_data.iterrows():
         type_lower = row.get('Type', '').lower()
         icon = 'home'
@@ -158,8 +158,8 @@ if cust_file:
             [row['Lat'], row['Long']],
             popup=popup_text,
             icon=folium.Icon(color=color, icon=icon, prefix='fa')
-        ).add_to(customer_cluster)
-    m.add_child(customer_cluster)
+        ).add_to(customer_cluster1)
+    m.add_child(customer_cluster1)
 
     # Existing hubs by Type
     if dc_file:
@@ -172,7 +172,7 @@ if cust_file:
                 [row['Lat'], row['Long']],
                 popup=popup_text,
                 icon=folium.Icon(color=color, icon=icon, prefix='fa')
-            ).add_to(m)
+            ).add_to(m1)
 
     # Suggested hubs with radius
     for i, (lat, lon) in enumerate(dc_locations):
@@ -180,20 +180,20 @@ if cust_file:
             location=[lat, lon],
             popup=f"Suggest Hub #{i+1}",
             icon=folium.Icon(color='green', icon='star', prefix='fa')
-        ).add_to(m)
+        ).add_to(m1)
 
         folium.Circle(
             location=[lat, lon],
-            radius=radius_m,
+            radius=radius_m1,
             color='green',
             fill=True,
             fill_opacity=0.1,
-            popup=f"Radius {radius_km} km"
-        ).add_to(m)
+            popup=f"Radius {radius_km1} km"
+        ).add_to(m1)
 
     # Show final map
     st.subheader("🗺️ Visualization")
-    st_folium(m, width=1100, height=600, returned_objects=[], key="main_map")
+    st_folium(m1, width=1100, height=600, returned_objects=[], key="main_map")
 
     ###############################################################################
     # Suggested hub clustering
