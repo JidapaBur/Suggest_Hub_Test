@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import folium
+from folium import FeatureGroup, LayerControl
 from folium.plugins import HeatMap, MarkerCluster
 from streamlit_folium import st_folium
 from sklearn.cluster import KMeans
@@ -96,6 +97,8 @@ if cust_file:
     radius_km = st.slider("Radius per hub (km):", 10, 300, 100)
     radius_m = radius_km * 1000
 
+    show_heatmap = st.checkbox("Show Heatmap", value=True)
+
     # Filter customers by radius around cluster centers
     kmeans = KMeans(n_clusters=n_dc, random_state=42)
     kmeans.fit(cust_data[['Lat', 'Long']])
@@ -104,11 +107,14 @@ if cust_file:
     # Create folium map
     m = folium.Map(location=[13.75, 100.5], zoom_start=6)
 
-    # Plot customer heatmap
-    heat_data = cust_data[['Lat', 'Long']].values.tolist()
-    HeatMap(heat_data, radius=10).add_to(m)
+    # Layer: Heatmap
+    heatmap_layer = FeatureGroup(name="Heatmap")
+    if show_heatmap:
+        HeatMap(cust_data[['Lat', 'Long']].values.tolist(), radius=10).add_to(heatmap_layer)
+    heatmap_layer.add_to(m)
 
     # Province-based Circle Visualization
+    province_layer = FeatureGroup(name="Customer Circles")
     province_counts = cust_data['Province'].value_counts()
     for province, count in province_counts.items():
         subset = cust_data[cust_data['Province'] == province]
@@ -121,10 +127,12 @@ if cust_file:
                 fill=True,
                 fill_opacity=0.5,
                 popup=f"{province}: {count} customers"
-            ).add_to(m)
+            ).add_to(province_layer)
+    province_layer.add_to(m)
 
-    # Clustered customer markers by Type
-    customer_cluster = MarkerCluster(name="Customers")
+    # Layer: Customer markers
+    customer_layer = FeatureGroup(name="Customer Markers")
+    customer_cluster = MarkerCluster(name="Customer Cluster")
     for _, row in cust_data.iterrows():
         type_lower = row.get('Type', '').lower()
         icon = 'home'
@@ -135,9 +143,11 @@ if cust_file:
             popup=popup_text,
             icon=folium.Icon(color=color, icon=icon, prefix='fa')
         ).add_to(customer_cluster)
-    m.add_child(customer_cluster)
+    customer_cluster.add_to(customer_layer)
+    customer_layer.add_to(m)
 
     # Existing hubs by Type
+    hub_layer = FeatureGroup(name="Existing Hubs")
     if dc_file:
         for _, row in dc_data.iterrows():
             type_lower = row.get('Type', '').lower()
@@ -148,15 +158,17 @@ if cust_file:
                 [row['Lat'], row['Long']],
                 popup=popup_text,
                 icon=folium.Icon(color=color, icon=icon, prefix='fa')
-            ).add_to(m)
+            ).add_to(hub_layer)
+    hub_layer.add_to(m)
 
-    # Suggested hubs with radius
+    # Suggested hubs
+    suggested_layer = FeatureGroup(name="Suggested Hubs")
     for i, (lat, lon) in enumerate(dc_locations):
         folium.Marker(
             location=[lat, lon],
             popup=f"Suggest Hub #{i+1}",
             icon=folium.Icon(color='green', icon='star', prefix='fa')
-        ).add_to(m)
+        ).add_to(suggested_layer)
 
         folium.Circle(
             location=[lat, lon],
@@ -165,7 +177,11 @@ if cust_file:
             fill=True,
             fill_opacity=0.1,
             popup=f"Radius {radius_km} km"
-        ).add_to(m)
+        ).add_to(suggested_layer)
+    suggested_layer.add_to(m)
+
+    # Layer toggle
+    LayerControl().add_to(m)
 
     # Show final map
     st.subheader("🗺️ Visualization")
