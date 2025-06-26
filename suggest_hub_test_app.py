@@ -52,8 +52,6 @@ if cust_file:
         st.error(f"❌ Failed to load customer file: {e}")
         st.stop()
 
-    locations = cust_data[['Lat', 'Long']]
-
     # Filter by Type
     customer_types = cust_data['Type'].dropna().unique().tolist()
     selected_types = st.multiselect("Filter Customer Types:", options=customer_types, default=customer_types)
@@ -128,3 +126,4 @@ if cust_file:
                     popup=f"Radius {radius_threshold_km} km"
                 ).add_to(m_new)
             st_folium(m_new, width=1100, height=600, key="new_hub_map")
+
