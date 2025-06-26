@@ -129,13 +129,14 @@ if cust_file:
             if show_existing_hubs:
                 existing_layer.add_to(m_new)
 
-            # Outside customer layer
+            # Outside customer layer with brand-based color
             outside_layer = FeatureGroup(name="Outside Customers")
             for _, row in outside_customers.iterrows():
+                color = 'red' if row.get('Type', '').lower() == 'makro' else 'lightblue'
                 folium.CircleMarker(
                     location=[row['Lat'], row['Long']],
                     radius=5,
-                    color='red',
+                    color=color,
                     fill=True,
                     fill_opacity=0.5,
                     popup=row['Customer_Code']
@@ -162,30 +163,15 @@ if cust_file:
             if show_suggested_hubs:
                 suggest_layer.add_to(m_new)
 
-            # Add heatmaps for Lotus and Makro
+            # Combined heatmap
             if show_heatmap:
-                lotus_data = cust_data[cust_data['Type'].str.lower() == 'lotus']
-                makro_data = cust_data[cust_data['Type'].str.lower() == 'makro']
-
-                lotus_heatmap_layer = FeatureGroup(name="Lotus Heatmap")
+                heatmap_layer = FeatureGroup(name="Customer Heatmap")
                 HeatMap(
-                    lotus_data[['Lat', 'Long']].values.tolist(),
+                    cust_data[['Lat', 'Long']].values.tolist(),
                     radius=10,
-                    gradient={0.2: '#C5E3B7', 0.6: '#78BE20', 1: '#4C8020'}
-                ).add_to(lotus_heatmap_layer)
-                lotus_heatmap_layer.add_to(m_new)
-
-                makro_heatmap_layer = FeatureGroup(name="Makro Heatmap")
-                HeatMap(
-                    makro_data[['Lat', 'Long']].values.tolist(),
-                    radius=10,
-                    gradient={0.2: '#F9C3C3', 0.6: '#ED1C24', 1: '#A10B0B'}
-                ).add_to(makro_heatmap_layer)
-                makro_heatmap_layer.add_to(m_new)
+                    gradient={0.2: '#E2F0CB', 0.6: '#86C166', 1: '#275D38'}
+                ).add_to(heatmap_layer)
+                heatmap_layer.add_to(m_new)
 
             LayerControl().add_to(m_new)
             st_folium(m_new, width=1100, height=600, key="new_hub_map", returned_objects=[], feature_group_to_add=None, center=[13.75, 100.5], zoom=6)
-
-
-
-
