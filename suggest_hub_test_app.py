@@ -188,4 +188,4 @@ if cust_file:
                 heatmap_layer.add_to(m_new)
 
             LayerControl().add_to(m_new)
-            st_folium(m_new, width=1100, height=600, key="new_hub_map", returned_objects=[], feature_group_to_add=None, center=[13.75,
+            st_folium(m_new, width=1100, height=600, key="new_hub_map", returned_objects=[], feature_group_to_add=None, center=[13.75, 100.5], zoom=6)
