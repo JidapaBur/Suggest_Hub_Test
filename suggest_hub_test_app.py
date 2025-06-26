@@ -115,11 +115,32 @@ if cust_file:
         center = cluster_points[['Lat', 'Long']].mean().values
         hdbscan_centers.append(center)
 
-     (KMeans or HDBSCAN)
-    clustering_choice = st.radio("Select clustering result to display on map:", ["KMeans", "HDBSCAN"])
-    dc_locations = kmeans_dc_locations if clustering_choice == "KMeans" else hdbscan_centers
-    clustering_choice = st.radio("Select clustering result to display on map:", ["KMeans", "Radius-based"])
-    dc_locations = kmeans_dc_locations if clustering_choice == "KMeans" else custom_dc_locations
+# ---------------------------
+# 🗺️ KMeans Visualization
+# ---------------------------
+st.subheader("🗺️ KMeans Hub Visualization")
+m_kmeans = folium.Map(location=[13.75, 100.5], zoom_start=6)
+for i, (lat, lon) in enumerate(kmeans_dc_locations):
+    folium.Marker(
+        location=[lat, lon],
+        popup=f"KMeans Hub #{i+1}",
+        icon=folium.Icon(color='blue', icon='star', prefix='fa')
+    ).add_to(m_kmeans)
+st_folium(m_kmeans, width=1100, height=400, key="map_kmeans")
+
+# ---------------------------
+# 🧭 HDBSCAN Visualization
+# ---------------------------
+st.subheader("🧭 HDBSCAN Hub Visualization")
+m_hdbscan = folium.Map(location=[13.75, 100.5], zoom_start=6)
+for i, (lat, lon) in enumerate(hdbscan_centers):
+    folium.Marker(
+        location=[lat, lon],
+        popup=f"HDBSCAN Hub #{i+1}",
+        icon=folium.Icon(color='green', icon='star', prefix='fa')
+    ).add_to(m_hdbscan)
+st_folium(m_hdbscan, width=1100, height=400, key="map_hdbscan")
+
 
     # Create folium map for KMeans
     st.subheader("🗺️ KMeans Visualization")
