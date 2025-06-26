@@ -14,7 +14,19 @@ cust_file = st.file_uploader("Upload Customer File (.csv with Lat, Long, Custome
 dc_file = st.file_uploader("Upload DC File (.csv with Lat, Long, DC_Name, Type, Province)", type="csv")
 
 if cust_file:
-    cust_data = pd.read_csv(cust_file).dropna(subset=['Lat', 'Long'])
+    try:
+    cust_data = pd.read_csv(cust_file)
+    if cust_data.empty:
+        st.error("🚫 Customer CSV file is empty. Please upload a file with data.")
+        st.stop()
+    cust_data = cust_data.dropna(subset=['Lat', 'Long'])
+except pd.errors.EmptyDataError:
+    st.error("🚫 Customer CSV file is empty or corrupted.")
+    st.stop()
+except Exception as e:
+    st.error(f\"❌ Failed to load customer file: {e}\")
+    st.stop()
+
     locations = cust_data[['Lat', 'Long']]
 
     # Filter by Type
