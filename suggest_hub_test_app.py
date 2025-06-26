@@ -88,7 +88,7 @@ if cust_file:
     customer_cluster = MarkerCluster(name="Customers")
     for _, row in cust_data.iterrows():
         type_lower = row.get('Type', '').lower()
-        icon = 'shopping-cart' if type_lower == 'lotus' else 'store'
+        icon = 'home' if type_lower == 'lotus' else 'home'
         color = 'lightblue' if type_lower == 'lotus' else 'red'
         popup_text = f"Customer: {row['Customer_Code']} ({row.get('Type', 'Unknown')})<br>Province: {row.get('Province', 'N/A')}"
         folium.Marker(
@@ -102,7 +102,7 @@ if cust_file:
     if dc_file:
         for _, row in dc_data.iterrows():
             type_lower = row.get('Type', '').lower()
-            icon = 'store' if type_lower == 'lotus' else 'warehouse'
+            icon = 'store' if type_lower == 'lotus' else 'store'
             color = 'lightblue' if type_lower == 'lotus' else 'red'
             popup_text = f"DC: {row['DC_Name']} ({row.get('Type', 'Unknown')})<br>Province: {row.get('Province', 'N/A')}"
             folium.Marker(
