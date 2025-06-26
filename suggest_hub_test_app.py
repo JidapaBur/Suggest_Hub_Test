@@ -7,6 +7,8 @@ from streamlit_folium import st_folium
 from sklearn.cluster import KMeans
 from geopy.distance import great_circle, geodesic
 import numpy as np
+import geopandas as gpd
+from shapely.geometry import Point
 
 st.set_page_config(layout="wide")
 st.title("📦 Customer & Hub Visualization Tool")
@@ -38,6 +40,9 @@ with col2:
 cust_file = st.file_uploader("Upload Customer File (.csv with Lat, Long, Customer_Code, Type, Province)", type="csv")
 dc_file = st.file_uploader("Upload Hub File (.csv with Lat, Long, Hub_Name, Type, Province)", type="csv")
 
+# Load Thailand GeoJSON for land masking
+gdf_thailand = gpd.read_file("/mnt/data/provinces.geojson")
+
 if cust_file:
     try:
         cust_data = pd.read_csv(cust_file)
@@ -45,9 +50,15 @@ if cust_file:
             st.error("🚫 Customer CSV file is empty. Please upload a file with data.")
             st.stop()
         cust_data = cust_data.dropna(subset=['Lat', 'Long'])
-        # Filter out coordinates outside Thailand roughly (5 to 21 lat, 97 to 106 long)
-        cust_data = cust_data[(cust_data['Lat'] >= 5) & (cust_data['Lat'] <= 21) &
-                              (cust_data['Long'] >= 97) & (cust_data['Long'] <= 106)]
+
+        # Convert to GeoDataFrame
+        cust_data['geometry'] = cust_data.apply(lambda row: Point(row['Long'], row['Lat']), axis=1)
+        cust_gdf = gpd.GeoDataFrame(cust_data, geometry='geometry', crs=gdf_thailand.crs)
+
+        # Filter by spatial intersection
+        cust_gdf = cust_gdf[cust_gdf.geometry.within(gdf_thailand.unary_union)]
+        cust_data = pd.DataFrame(cust_gdf.drop(columns="geometry"))
+
     except pd.errors.EmptyDataError:
         st.error("🚫 Customer CSV file is empty or corrupted.")
         st.stop()
