@@ -10,7 +10,7 @@ from geopy.distance import great_circle
 st.set_page_config(layout="wide")
 st.title("📦 Customer & Hub Visualization Tool")
 # Footer note
-st.markdown("<div style='text-align:right; font-size:12px; color:gray;'>Version 1.0.2 Developed by Jidapa Buranachan</div>", unsafe_allow_html=True)
+st.markdown("<div style='text-align:right; font-size:12px; color:gray;'>Developed by Jidapa Buranachan</div>", unsafe_allow_html=True)
 
 # Downloadable template section
 st.markdown("### 📥 Download Template Files")
@@ -98,6 +98,10 @@ if cust_file:
     radius_m = radius_km * 1000
 
     show_heatmap = st.checkbox("Show Heatmap", value=True)
+    show_province_circles = st.checkbox("Show Customer Province Circles", value=True)
+    show_customer_markers = st.checkbox("Show Customer Markers", value=True)
+    show_existing_hubs = st.checkbox("Show Existing Hubs", value=True)
+    show_suggested_hubs = st.checkbox("Show Suggested Hubs", value=True)
 
     # Filter customers by radius around cluster centers
     kmeans = KMeans(n_clusters=n_dc, random_state=42)
@@ -111,7 +115,8 @@ if cust_file:
     heatmap_layer = FeatureGroup(name="Heatmap")
     if show_heatmap:
         HeatMap(cust_data[['Lat', 'Long']].values.tolist(), radius=10).add_to(heatmap_layer)
-    heatmap_layer.add_to(m)
+    if show_heatmap:
+        heatmap_layer.add_to(m)
 
     # Province-based Circle Visualization
     province_layer = FeatureGroup(name="Customer Circles")
@@ -140,7 +145,8 @@ if cust_file:
                 fill_opacity=0.5,
                 popup=f"{province}: {count} customers"
             ).add_to(province_layer)
-    province_layer.add_to(m)
+    if show_province_circles:
+        province_layer.add_to(m)
 
     # Layer: Customer markers
     customer_layer = FeatureGroup(name="Customer Markers")
@@ -156,7 +162,8 @@ if cust_file:
             icon=folium.Icon(color=color, icon=icon, prefix='fa')
         ).add_to(customer_cluster)
     customer_cluster.add_to(customer_layer)
-    customer_layer.add_to(m)
+    if show_customer_markers:
+        customer_layer.add_to(m)
 
     # Existing hubs by Type
     hub_layer = FeatureGroup(name="Existing Hubs")
@@ -171,7 +178,8 @@ if cust_file:
                 popup=popup_text,
                 icon=folium.Icon(color=color, icon=icon, prefix='fa')
             ).add_to(hub_layer)
-    hub_layer.add_to(m)
+    if show_existing_hubs:
+        hub_layer.add_to(m)
 
     # Suggested hubs
     suggested_layer = FeatureGroup(name="Suggested Hubs")
@@ -190,7 +198,8 @@ if cust_file:
             fill_opacity=0.1,
             popup=f"Radius {radius_km} km"
         ).add_to(suggested_layer)
-    suggested_layer.add_to(m)
+    if show_suggested_hubs:
+        suggested_layer.add_to(m)
 
     # Layer toggle
     LayerControl().add_to(m)
@@ -198,4 +207,3 @@ if cust_file:
     # Show final map
     st.subheader("🗺️ Visualization")
     st_folium(m, width=1100, height=600, returned_objects=[], key="main_map")
-
