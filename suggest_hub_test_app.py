@@ -6,12 +6,11 @@ from folium.plugins import HeatMap, MarkerCluster
 from streamlit_folium import st_folium
 from sklearn.cluster import KMeans
 from geopy.distance import great_circle
-import hdbscan
 
 st.set_page_config(layout="wide")
 st.title("📦 Customer & Hub Visualization Tool")
 # Footer note
-st.markdown("<div style='text-align:right; font-size:12px; color:gray;'>Developed by Jidapa Buranachan</div>", unsafe_allow_html=True)
+st.markdown("<div style='text-align:right; font-size:12px; color:gray;'>Version 1.0.2 Developed by Jidapa Buranachan</div>", unsafe_allow_html=True)
 
 # Downloadable template section
 st.markdown("### 📥 Download Template Files")
@@ -99,39 +98,126 @@ if cust_file:
     kmeans.fit(cust_data[['Lat', 'Long']])
     kmeans_dc_locations = kmeans.cluster_centers_
 
-    # HDBSCAN-based Hub Suggestion
-    st.subheader("🧭 Radius-based Hub Grouping (HDBSCAN)")
-    min_cluster_size = st.slider("Minimum cluster size:", 2, 50, 10)
-    clusterer = hdbscan.HDBSCAN(min_cluster_size=min_cluster_size)
-    hdb_labels = clusterer.fit_predict(cust_data[['Lat', 'Long']])
+    # Radius-based Hub Suggestion (separate logic)
+    st.subheader("🧭 Radius-based Hub Grouping (DBSCAN-like)")
+    radius_km = st.slider("Radius per hub (km):", 10, 300, 100, key="radius_custom")
+    radius_m = radius_km * 1000
 
-    # Calculate cluster centers
-    hdbscan_centers = []
-    for label in set(hdb_labels):
-        if label == -1:
-            continue  # skip noise
-        cluster_points = cust_data[hdb_labels == label]
-        center = cluster_points[['Lat', 'Long']].mean().values
-        hdbscan_centers.append(center)
+    from geopy.distance import geodesic
+    import numpy as np
 
-    # Create folium map for KMeans
-    st.subheader("🗺️ KMeans Hub Visualization")
-    m_kmeans = folium.Map(location=[13.75, 100.5], zoom_start=6)
-    for i, (lat, lon) in enumerate(kmeans_dc_locations):
+    custom_dc_locations = []
+    unassigned = cust_data.copy()
+    while not unassigned.empty:
+        center = unassigned[['Lat', 'Long']].iloc[0].values
+        in_radius = unassigned.apply(
+            lambda row: geodesic(center, (row['Lat'], row['Long'])).km <= radius_km,
+            axis=1
+        )
+        group = unassigned[in_radius]
+        custom_dc_locations.append(group[['Lat', 'Long']].mean().values)
+        unassigned = unassigned[~in_radius]
+
+    # Choose one for map rendering (KMeans or custom)
+    clustering_choice = st.radio("Select clustering result to display on map:", ["KMeans", "Radius-based"])
+    dc_locations = kmeans_dc_locations if clustering_choice == "KMeans" else custom_dc_locations
+
+    # Create folium map
+    m = folium.Map(location=[13.75, 100.5], zoom_start=6)
+
+    # Layer: Heatmap
+    heatmap_layer = FeatureGroup(name="Heatmap")
+    if show_heatmap:
+        HeatMap(cust_data[['Lat', 'Long']].values.tolist(), radius=10).add_to(heatmap_layer)
+    if show_heatmap:
+        heatmap_layer.add_to(m)
+
+    # Province-based Circle Visualization
+    province_layer = FeatureGroup(name="Customer Circles")
+    province_counts = cust_data['Province'].value_counts()
+    for province, count in province_counts.items():
+        subset = cust_data[cust_data['Province'] == province]
+        if not subset.empty:
+            lat, lon = subset[['Lat', 'Long']].mean()
+            # Dynamic popup listing first few customer codes
+            sample_customers = subset['Customer_Code'].head(5).tolist()
+            sample_text = '<br>'.join(sample_customers)
+            full_popup = f"<b>{province}</b>: {count} customers<br><hr><b>Sample:</b><br>{sample_text}"
+            folium.CircleMarker(
+                location=[lat, lon],
+                radius=10 + count**0.5,
+                color='blue',
+                fill=True,
+                fill_opacity=0.5,
+                popup=folium.Popup(full_popup, max_width=250)
+            ).add_to(province_layer)
+            folium.CircleMarker(
+                location=[lat, lon],
+                radius=10 + count**0.5,
+                color='blue',
+                fill=True,
+                fill_opacity=0.5,
+                popup=f"{province}: {count} customers"
+            ).add_to(province_layer)
+    if show_province_circles:
+        province_layer.add_to(m)
+
+    # Layer: Customer markers
+    customer_layer = FeatureGroup(name="Customer Markers")
+    customer_cluster = MarkerCluster(name="Customer Cluster")
+    for _, row in cust_data.iterrows():
+        type_lower = row.get('Type', '').lower()
+        icon = 'home'
+        color = 'lightblue' if type_lower == 'lotus' else 'red'
+        popup_text = f"Customer: {row['Customer_Code']} ({row.get('Type', 'Unknown')})<br>Province: {row.get('Province', 'N/A')}"
+        folium.Marker(
+            [row['Lat'], row['Long']],
+            popup=popup_text,
+            icon=folium.Icon(color=color, icon=icon, prefix='fa')
+        ).add_to(customer_cluster)
+    customer_cluster.add_to(customer_layer)
+    if show_customer_markers:
+        customer_layer.add_to(m)
+
+    # Existing hubs by Type
+    hub_layer = FeatureGroup(name="Existing Hubs")
+    if dc_file:
+        for _, row in dc_data.iterrows():
+            type_lower = row.get('Type', '').lower()
+            icon = 'store'
+            color = 'lightblue' if type_lower == 'lotus' else 'red'
+            popup_text = f"Hub: {row['Hub_Name']} ({row.get('Type', 'Unknown')})<br>Province: {row.get('Province', 'N/A')}"
+            folium.Marker(
+                [row['Lat'], row['Long']],
+                popup=popup_text,
+                icon=folium.Icon(color=color, icon=icon, prefix='fa')
+            ).add_to(hub_layer)
+    if show_existing_hubs:
+        hub_layer.add_to(m)
+
+    # Suggested hubs
+    suggested_layer = FeatureGroup(name="Suggested Hubs")
+    for i, (lat, lon) in enumerate(dc_locations):
         folium.Marker(
             location=[lat, lon],
-            popup=f"KMeans Hub #{i+1}",
-            icon=folium.Icon(color='blue', icon='star', prefix='fa')
-        ).add_to(m_kmeans)
-    st_folium(m_kmeans, width=1100, height=400, key="map_kmeans")
-
-    # Create folium map for HDBSCAN
-    st.subheader("🧭 HDBSCAN Hub Visualization")
-    m_hdbscan = folium.Map(location=[13.75, 100.5], zoom_start=6)
-    for i, (lat, lon) in enumerate(hdbscan_centers):
-        folium.Marker(
-            location=[lat, lon],
-            popup=f"HDBSCAN Hub #{i+1}",
+            popup=f"Suggest Hub #{i+1}",
             icon=folium.Icon(color='green', icon='star', prefix='fa')
-        ).add_to(m_hdbscan)
-    st_folium(m_hdbscan, width=1100, height=400, key="map_hdbscan")
+        ).add_to(suggested_layer)
+
+        folium.Circle(
+            location=[lat, lon],
+            radius=radius_m,
+            color='green',
+            fill=True,
+            fill_opacity=0.1,
+            popup=f"Radius {radius_km} km"
+        ).add_to(suggested_layer)
+    if show_suggested_hubs:
+        suggested_layer.add_to(m)
+
+    # Layer toggle
+    LayerControl().add_to(m)
+
+    # Show final map
+    st.subheader("🗺️ Visualization")
+    st_folium(m, width=1100, height=600, returned_objects=[], key="main_map")
