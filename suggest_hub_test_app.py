@@ -114,10 +114,23 @@ if store_file:
 
 #------------------------------------------------------------------------------------------------------------------------
     
-    # Filter by Type
-    customer_types = cust_data['Type'].dropna().unique().tolist()
-    selected_types = st.multiselect("Filter Customer Types:", options=customer_types, default=customer_types)
-    cust_data = cust_data[cust_data['Type'].isin(selected_types)]
+    # รวม Customer และ Store พร้อม tag
+    cust_data['Source'] = "Customer"
+    cust_data = cust_data.rename(columns={"Customer_Code": "Code"})
+    
+    if 'store_data' in locals():
+        store_data['Source'] = "Store"
+        store_data = store_data.rename(columns={"Store_Code": "Code"})
+        combined_data = pd.concat([cust_data, store_data], ignore_index=True)
+    else:
+        combined_data = cust_data.copy()
+    
+    # ---------------- Filter by Type ----------------
+    all_types = combined_data['Type'].dropna().unique().tolist()
+    selected_types = st.multiselect("Filter Location Types:", options=all_types, default=all_types)
+    
+    # กรองตาม Type ที่เลือก
+    combined_data = combined_data[combined_data['Type'].isin(selected_types)]
 
 #------------------------------------------------------------------------------------------------------------------------
 
