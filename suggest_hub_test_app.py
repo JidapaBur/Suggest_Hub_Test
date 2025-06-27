@@ -354,3 +354,33 @@ st.subheader("📊 Customer Count by Type & Hub within Radius")
 st.dataframe(combined_summary)
 
 
+#------------------------------------------------------------------------------------------------------------------------
+
+
+import plotly.express as px
+
+# สร้าง Pie Chart ต่อ Hub
+st.subheader("📊 Customer Type Proportion in Radius of Each Hub")
+
+for hub_name in combined_summary['Hub_Name'].unique():
+    subset = combined_summary[combined_summary['Hub_Name'] == hub_name]
+
+    # กรองเฉพาะที่มีจำนวน > 0
+    subset = subset[subset["Count of Customer in Radius"] > 0]
+
+    if not subset.empty:
+        fig = px.bar(
+            subset,
+            x="Count of Customer in Radius",
+            y="Type of Cust",
+            orientation='h',
+            title=f"Hub: {hub_name}",
+            text_auto=True,
+            color="Type of Cust"
+        )
+        st.plotly_chart(fig, use_container_width=True)
+
+
+
+
+
