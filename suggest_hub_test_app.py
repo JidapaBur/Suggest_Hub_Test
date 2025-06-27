@@ -20,7 +20,7 @@ from shapely.geometry import Point
 st.set_page_config(layout="wide")
 st.title("Customer & Hub Visualization Tool")
 # Footer note
-st.markdown("<div style='text-align:right; font-size:12px; color:gray;'>Version 1.0.4 Developed by Jidapa Buranachan</div>", unsafe_allow_html=True)
+st.markdown("<div style='text-align:right; font-size:12px; color:gray;'>Version 1.0.5 Developed by Jidapa Buranachan</div>", unsafe_allow_html=True)
 
 #------------------------------------------------------------------------------------------------------------------------
 
@@ -207,7 +207,7 @@ if not cluster_data.empty:
         for _, row in dc_data.iterrows():
             folium.Marker(
                 location=[row['Lat'], row['Long']],
-                popup=row['Hub_Name'],
+                popup=f"Hub: {row['Hub_Name']}<br>Type: {row.get('Type', 'Unknown')}<br>Province: {row.get('Province', 'N/A')}",
                 icon=folium.Icon(color = 'red' if row.get('Type', '').lower() == 'makro' else 'blue', icon='store', prefix='fa')
             ).add_to(existing_layer)
         if show_existing_hubs:
