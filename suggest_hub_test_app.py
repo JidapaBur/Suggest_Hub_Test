@@ -226,42 +226,26 @@ if not cluster_data.empty:
                 ).add_to(radius_layer)
             radius_layer.add_to(m_new)
 
-        # Outside customer layer with brand-based color
-        cust_gdf = combined_gdf[combined_gdf['Source'] == 'Customer'].copy()
-        outside_customers = cust_gdf[cust_gdf['Outside_Hub'] == True]
-        outside_layer = FeatureGroup(name="Outside Customers")
-        for _, row in outside_customers.iterrows():
-            color = 'red' if row.get('Type', '').lower() == 'makro' else 'blue'
-            folium.CircleMarker(
-                location=[row['Lat'], row['Long']],
-                radius=5,
-                color=color,
-                fill=True,
-                fill_opacity=0.5,
-                popup=row['Code']
-            ).add_to(outside_layer)
-        if show_customer_markers:
-            outside_layer.add_to(m_new)
-
-        # Suggested hub layer
-        suggest_layer = FeatureGroup(name="Suggested New Hubs")
-        for i, (lat, lon) in enumerate(new_hub_locations):
-            point = Point(lon, lat)
-            
+    # Suggested hub layer
+    suggest_layer = FeatureGroup(name="Suggested New Hubs")
+    
+    for i, (lat, lon) in enumerate(new_hub_locations):
+        point = Point(lon, lat)
+    
         # หา province name
         province_name = "Unknown"
         for _, prov in provinces_gdf.iterrows():
             if point.within(prov['geometry']):
-                province_name = prov.get("pro_en", "Unknown")  # หรือเปลี่ยนชื่อคอลัมน์ตาม geojson ของคุณ
+                province_name = prov.get("pro_en", "Unknown")
                 break
-            
+    
         # แสดง marker + popup จังหวัด
         folium.Marker(
             location=[lat, lon],
             popup=f"Suggest New Hub #{i+1}<br>Province: {province_name}",
             icon=folium.Icon(color='darkgreen', icon='star', prefix='fa')
         ).add_to(suggest_layer)
-            
+    
         # วงรัศมี
         folium.Circle(
             location=[lat, lon],
@@ -271,7 +255,8 @@ if not cluster_data.empty:
             fill_opacity=0.1,
             popup=f"Radius {radius_threshold_km} km"
         ).add_to(suggest_layer)
-            
+    
+    # ✅ อย่าลืม add layer ถ้าเปิดให้แสดง
     if show_suggested_hubs:
         suggest_layer.add_to(m_new)
 
