@@ -301,6 +301,7 @@ if dc_file:
             radius_layer.add_to(m_new)
 
         # Outside customer layer with brand-based color
+        cust_gdf = combined_gdf[combined_gdf['Source'] == 'Customer'].copy()
         outside_customers = cust_gdf[cust_gdf['Outside_Hub'] == True]
         outside_layer = FeatureGroup(name="Outside Customers")
         for _, row in outside_customers.iterrows():
