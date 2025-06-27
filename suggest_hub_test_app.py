@@ -265,101 +265,101 @@ if dc_file:
             
     #------------------------------------------------------------------------------------------------------------------------
                 
-        # Layer visibility controls
-            with st.expander("🧭 Layer Visibility Controls"):
-                show_heatmap = st.checkbox("Show Heatmap", value=True)
-                show_customer_markers = st.checkbox("Show Customer Markers", value=True)
-                show_existing_hubs = st.checkbox("Show Existing Hubs", value=True)
-                show_suggested_hubs = st.checkbox("Show Suggested Hubs", value=True)
-                show_hub_radius_layer = st.checkbox("Show Existing Hub Radius Zones", value=True)
+    # Layer visibility controls
+        with st.expander("🧭 Layer Visibility Controls"):
+            show_heatmap = st.checkbox("Show Heatmap", value=True)
+            show_customer_markers = st.checkbox("Show Customer Markers", value=True)
+            show_existing_hubs = st.checkbox("Show Existing Hubs", value=True)
+            show_suggested_hubs = st.checkbox("Show Suggested Hubs", value=True)
+            show_hub_radius_layer = st.checkbox("Show Existing Hub Radius Zones", value=True)
                            
       
     #------------------------------------------------------------------------------------------------------------------------
     
-            # Existing hub layer
-            existing_layer = FeatureGroup(name="Existing Hubs")
+        # Existing hub layer
+        existing_layer = FeatureGroup(name="Existing Hubs")
+        for _, row in dc_data.iterrows():
+            folium.Marker(
+                location=[row['Lat'], row['Long']],
+                popup=row['Hub_Name'],
+                icon=folium.Icon(color = 'red' if row.get('Type', '').lower() == 'makro' else 'blue', icon='store', prefix='fa')
+            ).add_to(existing_layer)
+        if show_existing_hubs:
+            existing_layer.add_to(m_new)
+
+        # Existing hub radius circles
+        if show_hub_radius_layer:
+            radius_layer = FeatureGroup(name="Existing Hub Radius")
             for _, row in dc_data.iterrows():
-                folium.Marker(
-                    location=[row['Lat'], row['Long']],
-                    popup=row['Hub_Name'],
-                    icon=folium.Icon(color = 'red' if row.get('Type', '').lower() == 'makro' else 'blue', icon='store', prefix='fa')
-                ).add_to(existing_layer)
-            if show_existing_hubs:
-                existing_layer.add_to(m_new)
-
-            # Existing hub radius circles
-            if show_hub_radius_layer:
-                radius_layer = FeatureGroup(name="Existing Hub Radius")
-                for _, row in dc_data.iterrows():
-                    folium.Circle(
-                        location=[row['Lat'], row['Long']],
-                        radius=radius_threshold_km * 1000,
-                        color='gray',
-                        fill=False,
-                        dash_array="5"
-                    ).add_to(radius_layer)
-                radius_layer.add_to(m_new)
-
-            # Outside customer layer with brand-based color
-            outside_customers = cust_gdf[cust_gdf['Outside_Hub'] == True]
-            outside_layer = FeatureGroup(name="Outside Customers")
-            for _, row in outside_customers.iterrows():
-                color = 'red' if row.get('Type', '').lower() == 'makro' else 'blue'
-                folium.CircleMarker(
-                    location=[row['Lat'], row['Long']],
-                    radius=5,
-                    color=color,
-                    fill=True,
-                    fill_opacity=0.5,
-                    popup=row['Customer_Code']
-                ).add_to(outside_layer)
-            if show_customer_markers:
-                outside_layer.add_to(m_new)
-
-            # Suggested hub layer
-            suggest_layer = FeatureGroup(name="Suggested New Hubs")
-            for i, (lat, lon) in enumerate(new_hub_locations):
-                point = Point(lon, lat)
-            
-                # หา province name
-                province_name = "Unknown"
-                for _, prov in provinces_gdf.iterrows():
-                    if point.within(prov['geometry']):
-                        province_name = prov.get("pro_en", "Unknown")  # หรือเปลี่ยนชื่อคอลัมน์ตาม geojson ของคุณ
-                        break
-            
-                # แสดง marker + popup จังหวัด
-                folium.Marker(
-                    location=[lat, lon],
-                    popup=f"Suggest New Hub #{i+1}<br>Province: {province_name}",
-                    icon=folium.Icon(color='darkgreen', icon='star', prefix='fa')
-                ).add_to(suggest_layer)
-            
-                # วงรัศมี
                 folium.Circle(
-                    location=[lat, lon],
+                    location=[row['Lat'], row['Long']],
                     radius=radius_threshold_km * 1000,
-                    color='darkgreen',
-                    fill=True,
-                    fill_opacity=0.1,
-                    popup=f"Radius {radius_threshold_km} km"
-                ).add_to(suggest_layer)
+                    color='gray',
+                    fill=False,
+                    dash_array="5"
+                ).add_to(radius_layer)
+            radius_layer.add_to(m_new)
+
+        # Outside customer layer with brand-based color
+        outside_customers = cust_gdf[cust_gdf['Outside_Hub'] == True]
+        outside_layer = FeatureGroup(name="Outside Customers")
+        for _, row in outside_customers.iterrows():
+            color = 'red' if row.get('Type', '').lower() == 'makro' else 'blue'
+            folium.CircleMarker(
+                location=[row['Lat'], row['Long']],
+                radius=5,
+                color=color,
+                fill=True,
+                fill_opacity=0.5,
+                popup=row['Customer_Code']
+            ).add_to(outside_layer)
+        if show_customer_markers:
+            outside_layer.add_to(m_new)
+
+        # Suggested hub layer
+        suggest_layer = FeatureGroup(name="Suggested New Hubs")
+        for i, (lat, lon) in enumerate(new_hub_locations):
+            point = Point(lon, lat)
             
-            if show_suggested_hubs:
-                suggest_layer.add_to(m_new)
-
-            # Combined heatmap
-            if show_heatmap:
-                heatmap_layer = FeatureGroup(name="Customer Heatmap")
-                HeatMap(
-                    cust_data[['Lat', 'Long']].values.tolist(),
-                    radius=10,
-                    gradient={0.2: '#FFE5B4', 0.6: '#FFA500', 1: '#FF8C00'}
-                ).add_to(heatmap_layer)
-                heatmap_layer.add_to(m_new)
-
-            LayerControl().add_to(m_new)
-
-        #------------------------------------------------------------------------------------------------------------------------
+        # หา province name
+        province_name = "Unknown"
+        for _, prov in provinces_gdf.iterrows():
+            if point.within(prov['geometry']):
+                province_name = prov.get("pro_en", "Unknown")  # หรือเปลี่ยนชื่อคอลัมน์ตาม geojson ของคุณ
+                break
             
-            st_folium(m_new, width=1100, height=600, key="new_hub_map", returned_objects=[], feature_group_to_add=None, center=[13.75, 100.5], zoom=6)
+        # แสดง marker + popup จังหวัด
+        folium.Marker(
+            location=[lat, lon],
+            popup=f"Suggest New Hub #{i+1}<br>Province: {province_name}",
+            icon=folium.Icon(color='darkgreen', icon='star', prefix='fa')
+        ).add_to(suggest_layer)
+            
+        # วงรัศมี
+        folium.Circle(
+            location=[lat, lon],
+            radius=radius_threshold_km * 1000,
+            color='darkgreen',
+            fill=True,
+            fill_opacity=0.1,
+            popup=f"Radius {radius_threshold_km} km"
+        ).add_to(suggest_layer)
+            
+    if show_suggested_hubs:
+        suggest_layer.add_to(m_new)
+
+    # Combined heatmap
+    if show_heatmap:
+        heatmap_layer = FeatureGroup(name="Customer Heatmap")
+        HeatMap(
+            cust_data[['Lat', 'Long']].values.tolist(),
+            radius=10,
+            gradient={0.2: '#FFE5B4', 0.6: '#FFA500', 1: '#FF8C00'}
+        ).add_to(heatmap_layer)
+        heatmap_layer.add_to(m_new)
+
+    LayerControl().add_to(m_new)
+
+#------------------------------------------------------------------------------------------------------------------------
+            
+    st_folium(m_new, width=1100, height=600, key="new_hub_map", returned_objects=[], feature_group_to_add=None, center=[13.75, 100.5], zoom=6)
