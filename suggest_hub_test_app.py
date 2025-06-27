@@ -77,19 +77,19 @@ if cust_file:
     # คืนค่า DataFrame กลับไปใช้งานต่อ
     cust_data = pd.DataFrame(cust_gdf.drop(columns='geometry'))
 
-    ### Filter: only customers within Thailand bounding box
-    THAI_BOUNDING_BOX = {
-        'min_lat': 5.61,
-        'max_lat': 20.46,
-        'min_lon': 97.34,
-        'max_lon': 105.64
-    }
-    cust_data = cust_data[
-        (cust_data['Lat'] >= THAI_BOUNDING_BOX['min_lat']) &
-        (cust_data['Lat'] <= THAI_BOUNDING_BOX['max_lat']) &
-        (cust_data['Long'] >= THAI_BOUNDING_BOX['min_lon']) &
-        (cust_data['Long'] <= THAI_BOUNDING_BOX['max_lon'])
-    ]###
+    #Filter: only customers within Thailand bounding box
+    #THAI_BOUNDING_BOX = {
+    #    'min_lat': 5.61,
+    #    'max_lat': 20.46,
+    #    'min_lon': 97.34,
+    #    'max_lon': 105.64
+    #}
+    #cust_data = cust_data[
+    #    (cust_data['Lat'] >= THAI_BOUNDING_BOX['min_lat']) &
+    #    (cust_data['Lat'] <= THAI_BOUNDING_BOX['max_lat']) &
+    #    (cust_data['Long'] >= THAI_BOUNDING_BOX['min_lon']) &
+    #    (cust_data['Long'] <= THAI_BOUNDING_BOX['max_lon'])
+    #]
 
 
 #------------------------------------------------------------------------------------------------------------------------
