@@ -133,7 +133,7 @@ combined_data = combined_data[combined_data['Type'].isin(selected_types)]
 
 #------------------------------------------------------------------------------------------------------------------------
 
-    st.subheader("📍 Nearest Hub for Each Customer / Store")
+st.subheader("📍 Nearest Hub for Each Customer / Store")
     
     if dc_file:
         # ---------- Load Hub ----------
