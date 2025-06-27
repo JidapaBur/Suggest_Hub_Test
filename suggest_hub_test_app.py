@@ -60,11 +60,21 @@ with col3:
 #------------------------------------------------------------------------------------------------------------------------
 
 # ------------------------------ Upload files ------------------------------
-cust_file = st.file_uploader("📤 Upload Customer File (.csv with Lat, Long, Customer_Code, Type, Province)", type="csv")
-store_file = st.file_uploader("📤 Upload Store File (.csv with Lat, Long, Store_Code, Type, Province)", type="csv")
-dc_file = st.file_uploader("📤 Upload Hub File (.csv with Lat, Long, Hub_Name, Type, Province)", type="csv")
+cust_file = st.file_uploader(
+    "📤 Upload Customer File (.csv with Lat, Long, Customer_Code, Type, Province)",
+    type="csv"
+)
+store_file = st.file_uploader(
+    "📤 Upload Store File (.csv with Lat, Long, Store_Code, Type, Province)",
+    type="csv"
+)
+dc_file = st.file_uploader(
+    "📤 Upload Hub File (.csv with Lat, Long, Hub_Name, Type, Province)",
+    type="csv"
+)
 
 # ------------------------------ Load Customer File ------------------------------
+cust_data = None
 if cust_file:
     try:
         cust_data = pd.read_csv(cust_file)
@@ -80,6 +90,7 @@ if cust_file:
         st.stop()
 
 # ------------------------------ Load Store File ------------------------------
+store_data = None
 if store_file:
     try:
         store_data = pd.read_csv(store_file)
@@ -94,6 +105,7 @@ if store_file:
         st.error(f"❌ Failed to load store file: {e}")
         st.stop()
 
+
 #------------------------------------------------------------------------------------------------------------------------
     
 # ---------------- โหลดแผนที่ประเทศไทย ----------------
@@ -103,8 +115,7 @@ thailand_union = thailand.unary_union
 provinces_gdf = gpd.read_file("provinces.geojson")
 
 # ---------------- แปลงลูกค้าเป็น GeoDataFrame และกรองให้อยู่ในประเทศไทย ----------------
-if 'cust_data' in locals():
-    cust_data['geometry'] = cust_data.apply(lambda row: Point(row['Long'], row['Lat']), axis=1)
+cust_data['geometry'] = cust_data.apply(lambda row: Point(row['Long'], row['Lat']), axis=1)
 cust_gdf = gpd.GeoDataFrame(cust_data, geometry='geometry', crs="EPSG:4326")
 cust_gdf = cust_gdf[cust_gdf.geometry.within(thailand_union)]
 cust_data = pd.DataFrame(cust_gdf.drop(columns='geometry'))
