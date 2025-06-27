@@ -204,76 +204,74 @@ if dc_file:
         
     #------------------------------------------------------------------------------------------------------------------------
         
-    # Suggest New Hubs for Out-of-Radius Customers
-    st.subheader("Suggest New Hubs Based on Radius & Existing Hubs")
-    radius_threshold_km = st.slider("Set Radius Threshold from Existing Hubs (km):", 10, 500, 100)
-        
-    
-    #------------------------------------------------------------------------------------------------------------------------
-        
-    def kmeans_within_thailand(data, n_clusters, thailand_polygon, max_retry=10):
-        # ✅ แนะนำ: simplify polygon เพื่อให้ within() เร็วขึ้น (ค่า 0.01 = ประมาณ 1 กม.)
-        simplified_polygon = thailand_polygon.simplify(0.01)
-        
-        for i in range(max_retry):
-            kmeans = KMeans(n_clusters=n_clusters, random_state=42 + i)
-            kmeans.fit(data[['Lat', 'Long']])
-            centers = kmeans.cluster_centers_
-        
-            # ✅ Vectorized check: แปลงศูนย์กลางเป็น GeoSeries
-            centers_geometry = gpd.GeoSeries(
-                [Point(lon, lat) for lat, lon in centers],
-                crs="EPSG:4326"
-            )
-        
-            # ✅ ตรวจว่า center ทุกจุดอยู่ใน polygon ไทยที่ simplify แล้ว
-            if centers_geometry.within(simplified_polygon).all():
-                return [(lat, lon) for lat, lon in centers]
-        
-        # ❗ ถ้าทำไม่สำเร็จใน max_retry → ยอมใช้ค่าที่ได้ (อาจหลุดทะเล)
-        return [(lat, lon) for lat, lon in centers]
-            
-    #------------------------ Main Block ------------------------
-        
-    # -------------------- สร้าง BallTree และคำนวณระยะใกล้ที่สุด --------------------
-    hub_tree = BallTree(dc_coords, metric='haversine')
-    distances, _ = hub_tree.query(cust_coords, k=1)  # ระยะใกล้ที่สุดจากแต่ละลูกค้า
-    distances_km = distances.flatten() * 6371  # คูณรัศมีโลกให้เป็น km
-        
-    # -------------------- ตัดสินว่าอยู่นอกระยะ hub เดิมหรือไม่ --------------------
-    combined_data['Outside_Hub'] = distances_km > radius_threshold_km
-        
-    # -------------------- แปลงเป็น GeoDataFrame เพื่อตรวจสอบว่าอยู่ในประเทศไทย --------------------
-    combined_data['geometry'] = combined_data.apply(lambda row: Point(row['Long'], row['Lat']), axis=1)
-    combined_gdf = gpd.GeoDataFrame(combined_data, geometry='geometry', crs="EPSG:4326")
-    combined_gdf = combined_gdf[combined_gdf.geometry.within(thailand_union)]
-        
-    # ✅ ลูกค้าที่อยู่ในประเทศไทยทั้งหมด (จะรวมทั้งในระยะและนอกระยะ)
-    cluster_data = combined_gdf.copy()
-                
-    st.markdown(
-        f"<b>{len(cluster_data)} customers</b> will be used for new hub suggestions (in and out of coverage, inside Thailand).",
-        unsafe_allow_html=True
-    )
-        
-    if not cluster_data.empty:
-        n_new_hubs = st.slider("How many new hubs to suggest from all customers?", 1, 10, 3)
-        new_hub_locations = kmeans_within_thailand(cluster_data, n_new_hubs, thailand_union)
-            
-        st.subheader("New Hub Suggestions Map")
-        m_new = folium.Map(location=[13.75, 100.5], zoom_start=6, control_scale=True)
-            
-    #------------------------------------------------------------------------------------------------------------------------
-                
+# Suggest New Hubs for Out-of-Radius Customers
+st.subheader("Suggest New Hubs Based on Radius & Existing Hubs")
+radius_threshold_km = st.slider("Set Radius Threshold from Existing Hubs (km):", 10, 500, 100)
+
+# ------------------------------------------------------------------------------------------------------------------------
+
+def kmeans_within_thailand(data, n_clusters, thailand_polygon, max_retry=10):
+    # ✅ แนะนำ: simplify polygon เพื่อให้ within() เร็วขึ้น (ค่า 0.01 = ประมาณ 1 กม.)
+    simplified_polygon = thailand_polygon.simplify(0.01)
+
+    for i in range(max_retry):
+        kmeans = KMeans(n_clusters=n_clusters, random_state=42 + i)
+        kmeans.fit(data[['Lat', 'Long']])
+        centers = kmeans.cluster_centers_
+
+        # ✅ Vectorized check: แปลงศูนย์กลางเป็น GeoSeries
+        centers_geometry = gpd.GeoSeries(
+            [Point(lon, lat) for lat, lon in centers],
+            crs="EPSG:4326"
+        )
+
+        # ✅ ตรวจว่า center ทุกจุดอยู่ใน polygon ไทยที่ simplify แล้ว
+        if centers_geometry.within(simplified_polygon).all():
+            return [(lat, lon) for lat, lon in centers]
+
+    # ❗ ถ้าไม่สำเร็จใน max_retry → ยอมใช้ค่าที่ได้ (อาจหลุดทะเล)
+    return [(lat, lon) for lat, lon in centers]
+
+# ------------------------ Main Block ------------------------
+
+# -------------------- สร้าง BallTree และคำนวณระยะใกล้ที่สุด --------------------
+hub_tree = BallTree(dc_coords, metric='haversine')
+distances, _ = hub_tree.query(cust_coords, k=1)
+distances_km = distances.flatten() * 6371  # คูณรัศมีโลก
+
+# -------------------- ตัดสินว่าอยู่นอกระยะ hub เดิมหรือไม่ --------------------
+combined_data['Outside_Hub'] = distances_km > radius_threshold_km
+
+# -------------------- แปลงเป็น GeoDataFrame เพื่อตรวจสอบว่าอยู่ในประเทศไทย --------------------
+combined_data['geometry'] = combined_data.apply(lambda row: Point(row['Long'], row['Lat']), axis=1)
+combined_gdf = gpd.GeoDataFrame(combined_data, geometry='geometry', crs="EPSG:4326")
+combined_gdf = combined_gdf[combined_gdf.geometry.within(thailand_union)]
+
+# ✅ ลูกค้าที่อยู่ในประเทศไทยทั้งหมด
+cluster_data = combined_gdf.copy()
+
+st.markdown(
+    f"<b>{len(cluster_data)} customers</b> will be used for new hub suggestions (in and out of coverage, inside Thailand).",
+    unsafe_allow_html=True
+)
+
+if not cluster_data.empty:
+    n_new_hubs = st.slider("How many new hubs to suggest from all customers?", 1, 10, 3)
+    new_hub_locations = kmeans_within_thailand(cluster_data, n_new_hubs, thailand_union)
+
+    st.subheader("New Hub Suggestions Map")
+    m_new = folium.Map(location=[13.75, 100.5], zoom_start=6, control_scale=True)
+
+    # ------------------------------------------------------------------------------------------------------------------------
+
     # Layer visibility controls
-        with st.expander("🧭 Layer Visibility Controls"):
-            show_heatmap = st.checkbox("Show Heatmap", value=True)
-            show_customer_markers = st.checkbox("Show Customer Markers", value=True)
-            show_existing_hubs = st.checkbox("Show Existing Hubs", value=True)
-            show_suggested_hubs = st.checkbox("Show Suggested Hubs", value=True)
-            show_hub_radius_layer = st.checkbox("Show Existing Hub Radius Zones", value=True)
-                           
-      
+    with st.expander("🧭 Layer Visibility Controls"):
+        show_heatmap = st.checkbox("Show Heatmap", value=True)
+        show_customer_markers = st.checkbox("Show Customer Markers", value=True)
+        show_existing_hubs = st.checkbox("Show Existing Hubs", value=True)
+        show_suggested_hubs = st.checkbox("Show Suggested Hubs", value=True)
+        show_hub_radius_layer = st.checkbox("Show Existing Hub Radius Zones", value=True)
+
     #------------------------------------------------------------------------------------------------------------------------
     
         # Existing hub layer
