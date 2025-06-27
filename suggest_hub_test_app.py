@@ -123,7 +123,7 @@ if cust_file:
         cust_with_province = gpd.sjoin(cust_unknown_gdf, provinces_gdf, how="left", predicate="within")
         
         # ใส่ชื่อจังหวัดจาก polygon (เปลี่ยนชื่อคอลัมน์ให้ตรงกับ geojson ที่คุณใช้)
-        cust_with_province['Province'] = cust_with_province['PROV_NAMT']
+        cust_with_province['Province'] = cust_with_province['pro_en']
         
         # เตรียมข้อมูลลูกค้าที่รู้จังหวัดอยู่แล้ว
         cust_known = cust_data[~cust_data.index.isin(cust_unknown.index)].copy()
