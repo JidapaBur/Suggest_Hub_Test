@@ -141,18 +141,24 @@ def kmeans_within_thailand(data, n_clusters, thailand_polygon, max_retry=10):
         kmeans.fit(data[['Lat', 'Long']])
         centers = kmeans.cluster_centers_
 
-        # ✅ Vectorized check: แปลงศูนย์กลางเป็น GeoSeries
+        # ✅ แปลงศูนย์กลางเป็นจุด
         centers_geometry = gpd.GeoSeries(
             [Point(lon, lat) for lat, lon in centers],
             crs="EPSG:4326"
         )
 
-        # ✅ ตรวจว่า center ทุกจุดอยู่ใน polygon ไทยที่ simplify แล้ว
-        if centers_geometry.within(simplified_polygon).all():
-            return [(lat, lon) for lat, lon in centers]
+        # ✅ คัดเฉพาะศูนย์กลางที่อยู่ในประเทศไทย
+        valid_centers = [
+            (lat, lon) for (lat, lon), point in zip(centers, centers_geometry)
+            if point.within(simplified_polygon)
+        ]
 
-    # ❗ ถ้าไม่สำเร็จใน max_retry → ยอมใช้ค่าที่ได้ (อาจหลุดทะเล)
+        if valid_centers:
+            return valid_centers
+
+    # ❗ fallback ถ้าไม่มี center ไหนเลยอยู่ในไทย
     return [(lat, lon) for lat, lon in centers]
+
 
 # ------------------------ Main Block ------------------------
 
