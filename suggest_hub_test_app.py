@@ -310,42 +310,47 @@ if not cluster_data.empty:
 
 from geopy.distance import geodesic
 
-# สร้าง flag ว่าอยู่ในรัศมี hub เดิม
-def in_radius_any_hub(lat, lon, hubs, radius_km):
-    return any(geodesic((lat, lon), (hub_lat, hub_lon)).km <= radius_km for hub_lat, hub_lon in hubs)
+# ---------------- Helper function ----------------
+def customers_in_radius_by_hub(hub_list, hub_names, customer_data, radius_km, label_prefix=""):
+    records = []
 
-# เตรียมข้อมูลศูนย์กระจาย
-original_hubs = dc_data[['Lat', 'Long']].values.tolist()
-suggested_hubs = new_hub_locations
+    for (hub_name, lat, lon) in zip(hub_names, [x[0] for x in hub_list], [x[1] for x in hub_list]):
+        for cust_type in customer_data['Type'].unique():
+            subset = customer_data[customer_data['Type'] == cust_type]
+            count = subset.apply(
+                lambda row: geodesic((row['Lat'], row['Long']), (lat, lon)).km <= radius_km, axis=1
+            ).sum()
 
-# ตรวจสอบลูกค้าแต่ละราย
-cluster_data['In_Original_Hub_Radius'] = cluster_data.apply(
-    lambda row: in_radius_any_hub(row['Lat'], row['Long'], original_hubs, radius_threshold_km),
-    axis=1
+            records.append({
+                "Hub_Name": f"{label_prefix}{hub_name}",
+                "Type": cust_type,
+                "Customer_Count": count
+            })
+
+    return pd.DataFrame(records)
+
+# ---------------- Prepare Data ----------------
+# Original hubs
+original_hubs_coords = dc_data[['Lat', 'Long']].values.tolist()
+original_hubs_names = dc_data['Hub_Name'].tolist()
+
+# Suggested hubs (e.g. [(lat, lon), ...])
+suggested_hubs_coords = new_hub_locations
+suggested_hubs_names = [f"Suggest Hub #{i+1}" for i in range(len(suggested_hubs_coords))]
+
+# ---------------- Generate Tables ----------------
+original_summary = customers_in_radius_by_hub(
+    original_hubs_coords, original_hubs_names, cluster_data, radius_threshold_km
 )
 
-cluster_data['In_Suggested_Hub_Radius'] = cluster_data.apply(
-    lambda row: in_radius_any_hub(row['Lat'], row['Long'], suggested_hubs, radius_threshold_km),
-    axis=1
+suggested_summary = customers_in_radius_by_hub(
+    suggested_hubs_coords, suggested_hubs_names, cluster_data, radius_threshold_km
 )
 
-# สรุปผล: จำนวนลูกค้าในแต่ละกลุ่ม
-summary_df = pd.DataFrame({
-    "In original hub radius only": [
-        cluster_data[(cluster_data['In_Original_Hub_Radius']) & (~cluster_data['In_Suggested_Hub_Radius'])].shape[0]
-    ],
-    "In suggested hub radius only": [
-        cluster_data[(~cluster_data['In_Original_Hub_Radius']) & (cluster_data['In_Suggested_Hub_Radius'])].shape[0]
-    ],
-    "In both radii": [
-        cluster_data[(cluster_data['In_Original_Hub_Radius']) & (cluster_data['In_Suggested_Hub_Radius'])].shape[0]
-    ],
-    "In neither radius": [
-        cluster_data[(~cluster_data['In_Original_Hub_Radius']) & (~cluster_data['In_Suggested_Hub_Radius'])].shape[0]
-    ]
-})
+combined_summary = pd.concat([original_summary, suggested_summary], ignore_index=True)
 
-# แสดงตารางสรุป
-st.subheader("📊 Customer Coverage Summary by Radius")
-st.dataframe(summary_df)
+# ---------------- Display ----------------
+st.subheader("📊 Customer Count by Type & Hub within Radius")
+st.dataframe(combined_summary)
+
 
