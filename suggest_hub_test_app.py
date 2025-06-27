@@ -145,54 +145,49 @@ if cust_file:
     
     #------------------------------------------------------------------------------------------------------------------------
         
-        # ฟังก์ชัน: Loop KMeans จนกว่า centroid จะอยู่ในประเทศไทย
-        def kmeans_within_thailand(data, n_clusters, thailand_polygon, max_retry=10):
+        # ฟังก์ชัน: Loop KMeans จนได้ centroid ทุกจุดอยู่ในประเทศไทย
+        def kmeans_within_thailand(data, n_clusters, thailand_polygon, max_retry=20):
             for i in range(max_retry):
                 kmeans = KMeans(n_clusters=n_clusters, random_state=42 + i)
                 kmeans.fit(data[['Lat', 'Long']])
                 centers = kmeans.cluster_centers_
         
-                # ตรวจสอบทุก centroid ให้อยู่ในประเทศไทย
-                all_inside = all(Point(lon, lat).within(thailand_polygon) for lat, lon in centers)
-                if all_inside:
-                    return centers
-            return None  # ถ้ายังไม่เจอที่อยู่ในประเทศ
+                if all(Point(lon, lat).within(thailand_polygon) for lat, lon in centers):
+                    return [(lat, lon) for lat, lon in centers]
+            # ถ้าไม่สำเร็จภายใน max_retry → ยอมใช้ค่าที่ได้ แม้อาจอยู่นอกไทย
+            return [(lat, lon) for lat, lon in centers]
         
         #------------------------ Main Block ------------------------
         
+        # ระบุว่าอยู่นอกระยะ hub เดิมหรือไม่
         def is_outside_hubs(lat, lon):
             return all(
                 geodesic((lat, lon), (hub_lat, hub_lon)).km > radius_threshold_km
                 for hub_lat, hub_lon in dc_data[['Lat', 'Long']].values
             )
         
+        # คำนวณสถานะ Outside_Hub
         cust_data['Outside_Hub'] = cust_data.apply(
             lambda row: is_outside_hubs(row['Lat'], row['Long']), axis=1
         )
-        outside_customers = cust_data[cust_data['Outside_Hub'] == True]
         
-        # ✅ ตรวจสอบให้อยู่ในประเทศไทยจริง
-        outside_customers['geometry'] = outside_customers.apply(
-            lambda row: Point(row['Long'], row['Lat']), axis=1
-        )
-        outside_gdf = gpd.GeoDataFrame(outside_customers, geometry='geometry', crs="EPSG:4326")
-        outside_gdf = outside_gdf[outside_gdf.geometry.within(thailand_union)]
+        # ✅ แปลงเป็น geometry เพื่อตรวจสอบพิกัดประเทศไทย
+        cust_data['geometry'] = cust_data.apply(lambda row: Point(row['Long'], row['Lat']), axis=1)
+        cust_gdf = gpd.GeoDataFrame(cust_data, geometry='geometry', crs="EPSG:4326")
+        cust_gdf = cust_gdf[cust_gdf.geometry.within(thailand_union)]  # คัดลูกค้าให้อยู่ในประเทศไทย
+        
+        # ใช้ลูกค้าทั้งหมดที่อยู่ในประเทศในการหา hub ใหม่
+        cluster_data = cust_gdf.copy()
         
         st.markdown(
-            f"<b>{len(outside_gdf)} customers</b> are outside the {radius_threshold_km} km range from existing hubs AND within Thailand.",
+            f"<b>{len(cluster_data)} customers</b> will be used for new hub suggestions (in and out of coverage, inside Thailand).",
             unsafe_allow_html=True
         )
         
-        if not outside_gdf.empty:
-            n_new_hubs = st.slider("How many new hubs to suggest for uncovered areas?", 1, 10, 3)
-            new_hub_centers = kmeans_within_thailand(outside_gdf, n_new_hubs, thailand_union)
-        
-            if new_hub_centers is None:
-                st.error("❌ Could not generate valid hubs inside Thailand. Try fewer hubs or increase customer data.")
-                st.stop()
-            else:
-                new_hub_locations = [(lat, lon) for lat, lon in new_hub_centers]
-
+        if not cluster_data.empty:
+            n_new_hubs = st.slider("How many new hubs to suggest from all customers?", 1, 10, 3)
+            new_hub_locations = kmeans_within_thailand(cluster_data, n_new_hubs, thailand_union)
+            
             st.subheader("New Hub Suggestions Map")
             m_new = folium.Map(location=[13.75, 100.5], zoom_start=6, control_scale=True)
             
