@@ -241,15 +241,15 @@ if dc_file:
     distances_km = distances.flatten() * 6371  # คูณรัศมีโลกให้เป็น km
         
     # -------------------- ตัดสินว่าอยู่นอกระยะ hub เดิมหรือไม่ --------------------
-    cust_data['Outside_Hub'] = distances_km > radius_threshold_km
+    combined_data['Outside_Hub'] = distances_km > radius_threshold_km
         
     # -------------------- แปลงเป็น GeoDataFrame เพื่อตรวจสอบว่าอยู่ในประเทศไทย --------------------
-    cust_data['geometry'] = cust_data.apply(lambda row: Point(row['Long'], row['Lat']), axis=1)
-    cust_gdf = gpd.GeoDataFrame(cust_data, geometry='geometry', crs="EPSG:4326")
-    cust_gdf = cust_gdf[cust_gdf.geometry.within(thailand_union)]
+    combined_data['geometry'] = combined_data.apply(lambda row: Point(row['Long'], row['Lat']), axis=1)
+    combined_gdf = gpd.GeoDataFrame(combined_data, geometry='geometry', crs="EPSG:4326")
+    combined_gdf = combined_gdf[combined_gdf.geometry.within(thailand_union)]
         
     # ✅ ลูกค้าที่อยู่ในประเทศไทยทั้งหมด (จะรวมทั้งในระยะและนอกระยะ)
-    cluster_data = cust_gdf.copy()
+    cluster_data = combined_gdf.copy()
                 
     st.markdown(
         f"<b>{len(cluster_data)} customers</b> will be used for new hub suggestions (in and out of coverage, inside Thailand).",
