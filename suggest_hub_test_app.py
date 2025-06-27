@@ -358,12 +358,12 @@ for hub_name in combined_summary['Hub_Name'].unique():
     subset = combined_summary[combined_summary['Hub_Name'] == hub_name]
 
     # กรองเฉพาะที่มีจำนวน > 0
-    subset = subset[subset["Count of Customer in Radius"] > 0]
+    subset = subset[subset["Count of Customer"] > 0]
 
     if not subset.empty:
         fig = px.bar(
             subset,
-            x="Count of Customer in Radius",
+            x="Count of Customer",
             y="Type of Cust",
             orientation='h',
             title=f"Hub: {hub_name}",
