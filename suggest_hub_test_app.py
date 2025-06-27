@@ -110,6 +110,25 @@ if cust_file:
         # เตรียมข้อมูลลูกค้า
         cust_data[['Lat', 'Long']] = cust_data[['Lat', 'Long']].apply(pd.to_numeric, errors='coerce')
         cust_data = cust_data.dropna(subset=['Lat', 'Long'])
+
+        # เลือกลูกค้าที่ Province เป็น NaN หรือ "Unknown"
+        cust_unknown = cust_data[cust_data['Province'].isna() | (cust_data['Province'].str.lower() == 'unknown')].copy()
+        
+        # แปลงเป็นจุด geometry
+        cust_unknown['geometry'] = cust_unknown.apply(lambda row: Point(row['Long'], row['Lat']), axis=1)
+        cust_unknown_gdf = gpd.GeoDataFrame(cust_unknown, geometry='geometry', crs="EPSG:4326")
+        
+        # เชื่อมกับ polygon จังหวัดด้วย spatial join
+        cust_with_province = gpd.sjoin(cust_unknown_gdf, provinces_gdf, how="left", predicate="within")
+        
+        # ใส่ชื่อจังหวัดจาก polygon (เปลี่ยนชื่อคอลัมน์ให้ตรงกับ geojson ที่คุณใช้)
+        cust_with_province['Province'] = cust_with_province['PROV_NAMT']
+        
+        # เตรียมข้อมูลลูกค้าที่รู้จังหวัดอยู่แล้ว
+        cust_known = cust_data[~cust_data.index.isin(cust_unknown.index)].copy()
+        
+        # รวมทั้งหมดกลับมาเป็น cust_data
+        cust_data = pd.concat([cust_known, cust_with_province[cust_known.columns]], ignore_index=True)
     
         # ตรวจว่าคอลัมน์ Hub_Name มีจริง
         if 'Hub_Name' not in dc_data.columns:
