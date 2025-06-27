@@ -124,7 +124,7 @@ if cust_file:
     
         # ✅ คำนวณระยะแบบเวกเตอร์ (เร็วมาก)
         from scipy.spatial.distance import cdist
-        dist_matrix = cdist(cust_coords, dc_coords, metric='haversine') * 6371  # Earth radius in km
+        dist_matrix = cdist(cust_coords, dc_coords, metric=haversine_metric)
     
         # หาระยะใกล้สุดและชื่อ hub
         min_dists = dist_matrix.min(axis=1)
