@@ -108,6 +108,9 @@ if dc_file:
         combined_data = pd.concat([known, joined[known.columns]], ignore_index=True)
 
     # Distance calculation
+    combined_data[['Lat', 'Long']] = combined_data[['Lat', 'Long']].apply(pd.to_numeric, errors='coerce')
+    combined_data = combined_data.dropna(subset=['Lat', 'Long'])
+
     cust_coords = np.radians(combined_data[['Lat', 'Long']])
     dc_coords = np.radians(dc_data[['Lat', 'Long']])
     hub_tree = BallTree(dc_coords, metric='haversine')
