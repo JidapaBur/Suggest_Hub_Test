@@ -66,7 +66,7 @@ if cust_file:
 #------------------------------------------------------------------------------------------------------------------------
     # โหลดแผนที่ประเทศไทย
     thailand = gpd.read_file("thailand.geojson")
-    thailand_union = thailand_gdf.unary_union
+    thailand_union = thailand.unary_union
     
     # แปลงลูกค้าเป็น GeoDataFrame
     cust_data['geometry'] = cust_data.apply(lambda row: Point(row['Long'], row['Lat']), axis=1)
