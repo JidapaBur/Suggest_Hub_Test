@@ -103,7 +103,8 @@ thailand_union = thailand.unary_union
 provinces_gdf = gpd.read_file("provinces.geojson")
 
 # ---------------- แปลงลูกค้าเป็น GeoDataFrame และกรองให้อยู่ในประเทศไทย ----------------
-cust_data['geometry'] = cust_data.apply(lambda row: Point(row['Long'], row['Lat']), axis=1)
+if 'cust_data' in locals():
+    cust_data['geometry'] = cust_data.apply(lambda row: Point(row['Long'], row['Lat']), axis=1)
 cust_gdf = gpd.GeoDataFrame(cust_data, geometry='geometry', crs="EPSG:4326")
 cust_gdf = cust_gdf[cust_gdf.geometry.within(thailand_union)]
 cust_data = pd.DataFrame(cust_gdf.drop(columns='geometry'))
