@@ -68,6 +68,8 @@ if cust_file:
     thailand = gpd.read_file("thailand.geojson")
     thailand_union = thailand.unary_union
     
+    provinces_gdf = gpd.read_file("thailand_provinces.geojson")
+    
     # แปลงลูกค้าเป็น GeoDataFrame
     cust_data['geometry'] = cust_data.apply(lambda row: Point(row['Long'], row['Lat']), axis=1)
     cust_gdf = gpd.GeoDataFrame(cust_data, geometry='geometry', crs="EPSG:4326")
@@ -77,21 +79,6 @@ if cust_file:
     
     # คืนค่า DataFrame กลับไปใช้งานต่อ
     cust_data = pd.DataFrame(cust_gdf.drop(columns='geometry'))
-
-    #Filter: only customers within Thailand bounding box
-    #THAI_BOUNDING_BOX = {
-    #    'min_lat': 5.61,
-    #    'max_lat': 20.46,
-    #    'min_lon': 97.34,
-    #    'max_lon': 105.64
-    #}
-    #cust_data = cust_data[
-    #    (cust_data['Lat'] >= THAI_BOUNDING_BOX['min_lat']) &
-    #    (cust_data['Lat'] <= THAI_BOUNDING_BOX['max_lat']) &
-    #    (cust_data['Long'] >= THAI_BOUNDING_BOX['min_lon']) &
-    #    (cust_data['Long'] <= THAI_BOUNDING_BOX['max_lon'])
-    #]
-
 
 #------------------------------------------------------------------------------------------------------------------------
     
@@ -247,11 +234,23 @@ if cust_file:
             # Suggested hub layer
             suggest_layer = FeatureGroup(name="Suggested New Hubs")
             for i, (lat, lon) in enumerate(new_hub_locations):
+                point = Point(lon, lat)
+            
+                # หา province name
+                province_name = "Unknown"
+                for _, prov in provinces_gdf.iterrows():
+                    if point.within(prov['geometry']):
+                        province_name = prov.get("PROV_NAMT", "Unknown")  # หรือเปลี่ยนชื่อคอลัมน์ตาม geojson ของคุณ
+                        break
+            
+                # แสดง marker + popup จังหวัด
                 folium.Marker(
                     location=[lat, lon],
-                    popup=f"Suggest New Hub #{i+1}",
+                    popup=f"Suggest New Hub #{i+1}<br>Province: {province_name}",
                     icon=folium.Icon(color='darkgreen', icon='star', prefix='fa')
                 ).add_to(suggest_layer)
+            
+                # วงรัศมี
                 folium.Circle(
                     location=[lat, lon],
                     radius=radius_threshold_km * 1000,
@@ -260,6 +259,7 @@ if cust_file:
                     fill_opacity=0.1,
                     popup=f"Radius {radius_threshold_km} km"
                 ).add_to(suggest_layer)
+            
             if show_suggested_hubs:
                 suggest_layer.add_to(m_new)
 
