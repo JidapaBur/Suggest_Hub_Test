@@ -66,7 +66,8 @@ if cust_file:
 #------------------------------------------------------------------------------------------------------------------------
     # โหลดแผนที่ประเทศไทย
     thailand = gpd.read_file("thailand.geojson")
-
+    thailand_union = thailand_gdf.unary_union
+    
     # แปลงลูกค้าเป็น GeoDataFrame
     cust_data['geometry'] = cust_data.apply(lambda row: Point(row['Long'], row['Lat']), axis=1)
     cust_gdf = gpd.GeoDataFrame(cust_data, geometry='geometry', crs="EPSG:4326")
@@ -146,17 +147,29 @@ if cust_file:
         
         def is_outside_hubs(lat, lon):
             return all(geodesic((lat, lon), (hub_lat, hub_lon)).km > radius_threshold_km for hub_lat, hub_lon in dc_data[['Lat', 'Long']].values)
-
+        
         cust_data['Outside_Hub'] = cust_data.apply(lambda row: is_outside_hubs(row['Lat'], row['Long']), axis=1)
         outside_customers = cust_data[cust_data['Outside_Hub'] == True]
-
-        st.markdown(f"<b>{len(outside_customers)} customers</b> are outside the {radius_threshold_km} km range from existing hubs.", unsafe_allow_html=True)
-
-        if not outside_customers.empty:
+        
+        # ✅ เพิ่มตรวจสอบว่าอยู่ในประเทศไทยจริงด้วย polygon
+        outside_customers['geometry'] = outside_customers.apply(lambda row: Point(row['Long'], row['Lat']), axis=1)
+        outside_gdf = gpd.GeoDataFrame(outside_customers, geometry='geometry', crs="EPSG:4326")
+        outside_gdf = outside_gdf[outside_gdf.geometry.within(thailand_union)]
+        
+        st.markdown(f"<b>{len(outside_gdf)} customers</b> are outside the {radius_threshold_km} km range from existing hubs AND within Thailand.", unsafe_allow_html=True)
+        
+        if not outside_gdf.empty:
             n_new_hubs = st.slider("How many new hubs to suggest for uncovered areas?", 1, 10, 3)
             new_hub_kmeans = KMeans(n_clusters=n_new_hubs, random_state=42)
-            new_hub_kmeans.fit(outside_customers[['Lat', 'Long']])
-            new_hub_locations = new_hub_kmeans.cluster_centers_
+            new_hub_kmeans.fit(outside_gdf[['Lat', 'Long']])
+        
+            # ✅ ตรวจสอบศูนย์กลางว่าอยู่ในประเทศไทย
+            new_hub_locations = []
+            for lat, lon in new_hub_kmeans.cluster_centers_:
+                if Point(lon, lat).within(thailand_union):
+                    new_hub_locations.append((lat, lon))
+                else:
+                    print(f"⚠️ Hub suggestion at ({lat:.3f}, {lon:.3f}) is outside Thailand and was skipped.")
 
             st.subheader("New Hub Suggestions Map")
             m_new = folium.Map(location=[13.75, 100.5], zoom_start=6, control_scale=True)
