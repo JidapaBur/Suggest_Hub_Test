@@ -95,6 +95,14 @@ if cust_file:
     
     st.subheader("📍 Nearest Hub for Each Customer")
 
+    def haversine_metric(u, v):
+        lat1, lon1 = u
+        lat2, lon2 = v
+        dlat = lat2 - lat1
+        dlon = lon2 - lon1
+        a = np.sin(dlat / 2)**2 + np.cos(lat1) * np.cos(lat2) * np.sin(dlon / 2)**2
+        return 2 * 6371 * np.arcsin(np.sqrt(a))  # 6371 = รัศมีโลก (km)
+        
     if dc_file:
         # โหลดและแปลง Lat/Long เป็นตัวเลข
         dc_data = pd.read_csv(dc_file)
