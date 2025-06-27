@@ -306,22 +306,22 @@ if not cluster_data.empty:
 
 
 
-# ---------------- Helper function ----------------
-def customers_in_radius_by_hub(hub_list, hub_names, customer_data, radius_km, label_prefix=""):
-    records = []
-    for (hub_name, lat, lon) in zip(hub_names, [x[0] for x in hub_list], [x[1] for x in hub_list]):
-        count = customer_data.apply(
-            lambda row: geodesic((row['Lat'], row['Long']), (lat, lon)).km <= radius_km,
-            axis=1
-        ).sum()
-        records.append({
-            "Hub_Name": f"{label_prefix}{hub_name}",
-            "Customer_Count": count
-        })
-    return pd.DataFrame(records)
-
-# ---------------- Use it ----------------
-original_summary = customers_in_radius_by_hub(...)
+    # ---------------- Helper function ----------------
+    def customers_in_radius_by_hub(hub_list, hub_names, customer_data, radius_km, label_prefix=""):
+        records = []
+        for (hub_name, lat, lon) in zip(hub_names, [x[0] for x in hub_list], [x[1] for x in hub_list]):
+            count = customer_data.apply(
+                lambda row: geodesic((row['Lat'], row['Long']), (lat, lon)).km <= radius_km,
+                axis=1
+            ).sum()
+            records.append({
+                "Hub_Name": f"{label_prefix}{hub_name}",
+                "Customer_Count": count
+            })
+        return pd.DataFrame(records)
+    
+    # ---------------- Use it ----------------
+    original_summary = customers_in_radius_by_hub(...)
 
 
 
