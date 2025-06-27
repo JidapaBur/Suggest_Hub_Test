@@ -8,6 +8,7 @@ from sklearn.cluster import KMeans
 from geopy.distance import great_circle, geodesic
 import numpy as np
 
+from sklearn.neighbors import BallTree
 from scipy.spatial.distance import cdist
 from math import radians
 
@@ -92,19 +93,11 @@ if cust_file:
     cust_data = cust_data[cust_data['Type'].isin(selected_types)]
 
 #------------------------------------------------------------------------------------------------------------------------
-    
-    st.subheader("📍 Nearest Hub for Each Customer")
 
-    def haversine_metric(u, v):
-        lat1, lon1 = u
-        lat2, lon2 = v
-        dlat = lat2 - lat1
-        dlon = lon2 - lon1
-        a = np.sin(dlat / 2)**2 + np.cos(lat1) * np.cos(lat2) * np.sin(dlon / 2)**2
-        return 2 * 6371 * np.arcsin(np.sqrt(a))  # 6371 = รัศมีโลก (km)
-        
+    st.subheader("📍 Nearest Hub for Each Customer")
+    
     if dc_file:
-        # โหลดและแปลง Lat/Long เป็นตัวเลข
+        # โหลด Hub และทำความสะอาดข้อมูล
         dc_data = pd.read_csv(dc_file)
         dc_data[['Lat', 'Long']] = dc_data[['Lat', 'Long']].apply(pd.to_numeric, errors='coerce')
         dc_data = dc_data.dropna(subset=['Lat', 'Long'])
@@ -114,30 +107,43 @@ if cust_file:
         selected_dc_types = st.multiselect("Filter Hub Types:", options=dc_types, default=dc_types)
         dc_data = dc_data[dc_data['Type'].isin(selected_dc_types)]
     
-        # ✅ แปลง Lat/Long ของลูกค้าเช่นเดียวกัน
+        # เตรียมข้อมูลลูกค้า
         cust_data[['Lat', 'Long']] = cust_data[['Lat', 'Long']].apply(pd.to_numeric, errors='coerce')
         cust_data = cust_data.dropna(subset=['Lat', 'Long'])
     
-        # แปลงเป็น radians
+        # ตรวจว่าคอลัมน์ Hub_Name มีจริง
+        if 'Hub_Name' not in dc_data.columns:
+            st.error("❌ 'Hub_Name' column is missing in hub data.")
+            st.stop()
+    
+        # แปลงพิกัดเป็น radians
         cust_coords = np.radians(cust_data[['Lat', 'Long']].values)
         dc_coords = np.radians(dc_data[['Lat', 'Long']].values)
     
-        # ✅ คำนวณระยะแบบเวกเตอร์ (เร็วมาก)
-        from scipy.spatial.distance import cdist
-        dist_matrix = cdist(cust_coords, dc_coords, metric=haversine_metric)
+        # สร้าง BallTree จากจุด Hub
+        hub_tree = BallTree(dc_coords, metric='haversine')
     
-        # หาระยะใกล้สุดและชื่อ hub
-        min_dists = dist_matrix.min(axis=1)
-        nearest_indices = dist_matrix.argmin(axis=1)
+        # คำนวณระยะทางไป hub ที่ใกล้ที่สุด
+        distances, indices = hub_tree.query(cust_coords, k=1)
+        distances_km = distances.flatten() * 6371  # Earth radius in km
     
-        # เตรียม DataFrame แสดงผล
+        # เตรียมตารางแสดงผล
         nearest_df = cust_data[['Customer_Code', 'Type', 'Province']].copy()
-        nearest_df['Nearest_Hub'] = dc_data.iloc[nearest_indices]['Hub_Name'].values
-        nearest_df['Distance_km'] = np.round(min_dists, 2)
+        nearest_df['Nearest_Hub'] = dc_data.iloc[indices.flatten()]['Hub_Name'].values
+        nearest_df['Distance_km'] = np.round(distances_km, 2)
     
+        st.success(f"✅ Calculated nearest hubs for {len(nearest_df)} customers.")
         st.dataframe(nearest_df)
-
-  
+    
+        # ✅ (Optional) ปุ่มดาวน์โหลด
+        csv = nearest_df.to_csv(index=False).encode('utf-8-sig')
+        st.download_button(
+            label="⬇️ Download Nearest Hub Results",
+            data=csv,
+            file_name='nearest_hub_results.csv',
+            mime='text/csv'
+        )
+        
     #------------------------------------------------------------------------------------------------------------------------
         
         # Suggest New Hubs for Out-of-Radius Customers
