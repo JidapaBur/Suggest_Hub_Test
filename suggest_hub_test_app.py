@@ -8,7 +8,6 @@ from sklearn.cluster import KMeans
 from geopy.distance import great_circle, geodesic
 import numpy as np
 
-pip install geopandas shapely
 import geopandas as gpd
 from shapely.geometry import Point
 
