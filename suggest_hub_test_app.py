@@ -187,26 +187,22 @@ if cust_file:
         
         #------------------------ Main Block ------------------------
         
-        # ระบุว่าอยู่นอกระยะ hub เดิมหรือไม่
-        def is_outside_hubs(lat, lon):
-            return all(
-                geodesic((lat, lon), (hub_lat, hub_lon)).km > radius_threshold_km
-                for hub_lat, hub_lon in dc_data[['Lat', 'Long']].values
-            )
+        # -------------------- สร้าง BallTree และคำนวณระยะใกล้ที่สุด --------------------
+        hub_tree = BallTree(dc_coords, metric='haversine')
+        distances, _ = hub_tree.query(cust_coords, k=1)  # ระยะใกล้ที่สุดจากแต่ละลูกค้า
+        distances_km = distances.flatten() * 6371  # คูณรัศมีโลกให้เป็น km
         
-        # คำนวณสถานะ Outside_Hub
-        cust_data['Outside_Hub'] = cust_data.apply(
-            lambda row: is_outside_hubs(row['Lat'], row['Long']), axis=1
-        )
+        # -------------------- ตัดสินว่าอยู่นอกระยะ hub เดิมหรือไม่ --------------------
+        cust_data['Outside_Hub'] = distances_km > radius_threshold_km
         
-        # ✅ แปลงเป็น geometry เพื่อตรวจสอบพิกัดประเทศไทย
+        # -------------------- แปลงเป็น GeoDataFrame เพื่อตรวจสอบว่าอยู่ในประเทศไทย --------------------
         cust_data['geometry'] = cust_data.apply(lambda row: Point(row['Long'], row['Lat']), axis=1)
         cust_gdf = gpd.GeoDataFrame(cust_data, geometry='geometry', crs="EPSG:4326")
-        cust_gdf = cust_gdf[cust_gdf.geometry.within(thailand_union)]  # คัดลูกค้าให้อยู่ในประเทศไทย
+        cust_gdf = cust_gdf[cust_gdf.geometry.within(thailand_union)]
         
-        # ใช้ลูกค้าทั้งหมดที่อยู่ในประเทศในการหา hub ใหม่
+        # ✅ ลูกค้าที่อยู่ในประเทศไทยทั้งหมด (จะรวมทั้งในระยะและนอกระยะ)
         cluster_data = cust_gdf.copy()
-        
+                
         st.markdown(
             f"<b>{len(cluster_data)} customers</b> will be used for new hub suggestions (in and out of coverage, inside Thailand).",
             unsafe_allow_html=True
