@@ -66,13 +66,6 @@ if cust_file:
 #------------------------------------------------------------------------------------------------------------------------
     # โหลดแผนที่ประเทศไทย
     thailand = gpd.read_file("thailand.geojson")
-    
-    ###geojson_file = st.file_uploader("Upload Thailand GeoJSON", type="geojson")
-    if geojson_file:
-        thailand = gpd.read_file(geojson_file)
-    else:
-        st.warning("Please upload a Thailand GeoJSON file.")
-        st.stop()###
 
     # แปลงลูกค้าเป็น GeoDataFrame
     cust_data['geometry'] = cust_data.apply(lambda row: Point(row['Long'], row['Lat']), axis=1)
