@@ -301,3 +301,55 @@ if not cluster_data.empty:
 #------------------------------------------------------------------------------------------------------------------------
             
     st_folium(m_new, width=1100, height=600, key="new_hub_map", returned_objects=[], feature_group_to_add=None, center=[13.75, 100.5], zoom=6)
+
+#------------------------------------------------------------------------------------------------------------------------
+
+
+
+
+
+
+# ---------------------- คำนวณระยะจาก hub เดิม ----------------------
+def is_within_existing_hub(lat, lon, dc_data, threshold_km):
+    return any(
+        geodesic((lat, lon), (hub_lat, hub_lon)).km <= threshold_km
+        for hub_lat, hub_lon in dc_data[['Lat', 'Long']].values
+    )
+
+# ---------------------- คำนวณระยะจาก suggested hub ----------------------
+def is_within_suggested_hub(lat, lon, suggested_locations, threshold_km):
+    return any(
+        geodesic((lat, lon), (hub_lat, hub_lon)).km <= threshold_km
+        for hub_lat, hub_lon in suggested_locations
+    )
+
+# คำนวณสถานะของลูกค้าแต่ละราย
+combined_data['In_Existing_Hub'] = combined_data.apply(
+    lambda row: is_within_existing_hub(row['Lat'], row['Long'], dc_data, radius_threshold_km2), axis=1
+)
+combined_data['In_Suggested_Hub'] = combined_data.apply(
+    lambda row: is_within_suggested_hub(row['Lat'], row['Long'], new_hub_locations, radius_threshold_km2), axis=1
+)
+
+# เงื่อนไขการจัดกลุ่ม
+def classify_coverage(row):
+    if row['In_Existing_Hub']:
+        return 'In Existing Hub Radius'
+    elif row['In_Suggested_Hub']:
+        return 'In Suggested Hub Radius'
+    else:
+        return 'Outside All Coverage'
+
+combined_data['Coverage_Status'] = combined_data.apply(classify_coverage, axis=1)
+
+# ---------------------- สร้าง Summary Table ----------------------
+summary_table = (
+    combined_data['Coverage_Status']
+    .value_counts()
+    .reset_index()
+    .rename(columns={'index': 'Coverage Status', 'Coverage_Status': 'Customer Count'})
+)
+
+# ---------------------- แสดงผล ----------------------
+st.subheader("📊 Customer Distribution by Coverage Zone")
+st.dataframe(summary_table)
