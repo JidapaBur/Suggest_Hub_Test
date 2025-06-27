@@ -312,7 +312,7 @@ if dc_file:
                 color=color,
                 fill=True,
                 fill_opacity=0.5,
-                popup=row['Customer_Code']
+                popup=row['Code']
             ).add_to(outside_layer)
         if show_customer_markers:
             outside_layer.add_to(m_new)
