@@ -106,13 +106,14 @@ if cust_file:
         dc_types = dc_data['Type'].dropna().unique().tolist()
         selected_dc_types = st.multiselect("Filter Hub Types:", options=dc_types, default=dc_types)
         dc_data = dc_data[dc_data['Type'].isin(selected_dc_types)]
-    
+        
         # เตรียมข้อมูลลูกค้า
         cust_data[['Lat', 'Long']] = cust_data[['Lat', 'Long']].apply(pd.to_numeric, errors='coerce')
         cust_data = cust_data.dropna(subset=['Lat', 'Long'])
-
+        cust_data['Province'] = cust_data['Province'].fillna("").astype(str)
+        
         # เลือกลูกค้าที่ Province เป็น NaN หรือ "Unknown"
-        cust_unknown = cust_data[cust_data['Province'].isna() | (cust_data['Province'].str.lower() == 'unknown')].copy()
+        cust_unknown = cust_data[cust_data['Province'].str.lower().isin(["", "unknown"])].copy()
         
         # แปลงเป็นจุด geometry
         cust_unknown['geometry'] = cust_unknown.apply(lambda row: Point(row['Long'], row['Lat']), axis=1)
