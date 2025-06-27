@@ -183,6 +183,15 @@ st.markdown(
     unsafe_allow_html=True
 )
 
+# -------------------- จำนวนลูกค้าที่อยู่นอกระยะ hub เดิม และอยู่ในประเทศไทย --------------------
+outside_customers_gdf = cluster_data[cluster_data['Outside_Hub'] == True]
+outside_count = len(outside_customers_gdf)
+
+st.markdown(
+    f"<b>{outside_count} customers</b> are outside the {radius_threshold_km} km range from existing hubs (inside Thailand).",
+    unsafe_allow_html=True
+)
+
 if not cluster_data.empty:
     n_new_hubs = st.slider("How many new hubs to suggest from all customers?", 1, 10, 3)
     new_hub_locations = kmeans_within_thailand(cluster_data, n_new_hubs, thailand_union)
