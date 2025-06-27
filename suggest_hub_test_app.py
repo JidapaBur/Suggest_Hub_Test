@@ -96,30 +96,37 @@ if cust_file:
     st.subheader("📍 Nearest Hub for Each Customer")
 
     if dc_file:
-        dc_data = pd.read_csv(dc_file).dropna(subset=['Lat', 'Long'])
-
+        # โหลดและแปลง Lat/Long เป็นตัวเลข
+        dc_data = pd.read_csv(dc_file)
+        dc_data[['Lat', 'Long']] = dc_data[['Lat', 'Long']].apply(pd.to_numeric, errors='coerce')
+        dc_data = dc_data.dropna(subset=['Lat', 'Long'])
+    
         # Filter Hub types
         dc_types = dc_data['Type'].dropna().unique().tolist()
         selected_dc_types = st.multiselect("Filter Hub Types:", options=dc_types, default=dc_types)
         dc_data = dc_data[dc_data['Type'].isin(selected_dc_types)]
-
-        # Find nearest hub for each customer
-        # เตรียมจุดลูกค้าและ hub เป็น array [lat, lon] แล้วแปลงเป็น radians
+    
+        # ✅ แปลง Lat/Long ของลูกค้าเช่นเดียวกัน
+        cust_data[['Lat', 'Long']] = cust_data[['Lat', 'Long']].apply(pd.to_numeric, errors='coerce')
+        cust_data = cust_data.dropna(subset=['Lat', 'Long'])
+    
+        # แปลงเป็น radians
         cust_coords = np.radians(cust_data[['Lat', 'Long']].values)
         dc_coords = np.radians(dc_data[['Lat', 'Long']].values)
-        
-        # คำนวณระยะทุกจุดแบบเวกเตอร์
-        dist_matrix = cdist(cust_coords, dc_coords, metric='haversine') * 6371  # ผลลัพธ์หน่วยเป็น km
-        
-        # หาค่า min ระยะทางและตำแหน่ง Hub ที่ใกล้ที่สุด
+    
+        # ✅ คำนวณระยะแบบเวกเตอร์ (เร็วมาก)
+        from scipy.spatial.distance import cdist
+        dist_matrix = cdist(cust_coords, dc_coords, metric='haversine') * 6371  # Earth radius in km
+    
+        # หาระยะใกล้สุดและชื่อ hub
         min_dists = dist_matrix.min(axis=1)
         nearest_indices = dist_matrix.argmin(axis=1)
-        
-        # สร้าง DataFrame ที่เร็วขึ้น
+    
+        # เตรียม DataFrame แสดงผล
         nearest_df = cust_data[['Customer_Code', 'Type', 'Province']].copy()
         nearest_df['Nearest_Hub'] = dc_data.iloc[nearest_indices]['Hub_Name'].values
         nearest_df['Distance_km'] = np.round(min_dists, 2)
-        
+    
         st.dataframe(nearest_df)
 
   
