@@ -121,68 +121,67 @@ if store_file:
 
 #------------------------------------------------------------------------------------------------------------------------
 
-    st.subheader("📍 Nearest Hub for Each Customer")
+    st.subheader("📍 Nearest Hub for Each Customer / Store")
     
     if dc_file:
-        # โหลด Hub และทำความสะอาดข้อมูล
+        # ---------- Load Hub ----------
         dc_data = pd.read_csv(dc_file)
         dc_data[['Lat', 'Long']] = dc_data[['Lat', 'Long']].apply(pd.to_numeric, errors='coerce')
         dc_data = dc_data.dropna(subset=['Lat', 'Long'])
     
-        # Filter Hub types
         dc_types = dc_data['Type'].dropna().unique().tolist()
         selected_dc_types = st.multiselect("Filter Hub Types:", options=dc_types, default=dc_types)
         dc_data = dc_data[dc_data['Type'].isin(selected_dc_types)]
-        
-        # เตรียมข้อมูลลูกค้า
-        cust_data[['Lat', 'Long']] = cust_data[['Lat', 'Long']].apply(pd.to_numeric, errors='coerce')
-        cust_data = cust_data.dropna(subset=['Lat', 'Long'])
-        cust_data['Province'] = cust_data['Province'].fillna("").astype(str)
-        
-        # เลือกลูกค้าที่ Province เป็น NaN หรือ "Unknown"
-        cust_unknown = cust_data[cust_data['Province'].str.lower().isin(["", "unknown"])].copy()
-        
-        # แปลงเป็นจุด geometry
-        cust_unknown['geometry'] = cust_unknown.apply(lambda row: Point(row['Long'], row['Lat']), axis=1)
-        cust_unknown_gdf = gpd.GeoDataFrame(cust_unknown, geometry='geometry', crs="EPSG:4326")
-        
-        # เชื่อมกับ polygon จังหวัดด้วย spatial join
-        cust_with_province = gpd.sjoin(cust_unknown_gdf, provinces_gdf, how="left", predicate="within")
-        
-        # ใส่ชื่อจังหวัดจาก polygon (เปลี่ยนชื่อคอลัมน์ให้ตรงกับ geojson ที่คุณใช้)
-        cust_with_province['Province'] = cust_with_province['pro_en']
-        
-        # เตรียมข้อมูลลูกค้าที่รู้จังหวัดอยู่แล้ว
-        cust_known = cust_data[~cust_data.index.isin(cust_unknown.index)].copy()
-        
-        # รวมทั้งหมดกลับมาเป็น cust_data
-        cust_data = pd.concat([cust_known, cust_with_province[cust_known.columns]], ignore_index=True)
     
-        # ตรวจว่าคอลัมน์ Hub_Name มีจริง
         if 'Hub_Name' not in dc_data.columns:
             st.error("❌ 'Hub_Name' column is missing in hub data.")
             st.stop()
     
-        # แปลงพิกัดเป็น radians
-        cust_coords = np.radians(cust_data[['Lat', 'Long']].values)
-        dc_coords = np.radians(dc_data[['Lat', 'Long']].values)
+        # ---------- Load Customer ----------
+        cust_data[['Lat', 'Long']] = cust_data[['Lat', 'Long']].apply(pd.to_numeric, errors='coerce')
+        cust_data = cust_data.dropna(subset=['Lat', 'Long'])
+        cust_data['Province'] = cust_data['Province'].fillna("").astype(str)
+        cust_data['Source'] = "Customer"
+        cust_data = cust_data.rename(columns={"Customer_Code": "Code"})  # unify column name
     
-        # สร้าง BallTree จากจุด Hub
+        # ---------- Load Store ----------
+        if 'store_data' in locals():
+            store_data[['Lat', 'Long']] = store_data[['Lat', 'Long']].apply(pd.to_numeric, errors='coerce')
+            store_data = store_data.dropna(subset=['Lat', 'Long'])
+            store_data['Province'] = store_data['Province'].fillna("").astype(str)
+            store_data['Source'] = "Store"
+            store_data = store_data.rename(columns={"Store_Code": "Code"})  # unify column name
+            combined_data = pd.concat([cust_data, store_data], ignore_index=True)
+        else:
+            combined_data = cust_data.copy()
+    
+        # ---------- Optional: Fill missing province using GeoJSON ----------
+        unknown = combined_data[combined_data['Province'].str.lower().isin(["", "unknown"])].copy()
+        if not unknown.empty:
+            unknown['geometry'] = unknown.apply(lambda row: Point(row['Long'], row['Lat']), axis=1)
+            unknown_gdf = gpd.GeoDataFrame(unknown, geometry='geometry', crs="EPSG:4326")
+            joined = gpd.sjoin(unknown_gdf, provinces_gdf, how="left", predicate="within")
+            joined['Province'] = joined['pro_en']
+            known = combined_data[~combined_data.index.isin(unknown.index)].copy()
+            combined_data = pd.concat([known, joined[known.columns]], ignore_index=True)
+    
+        # ---------- BallTree Nearest Hub ----------
+        cust_coords = np.radians(combined_data[['Lat', 'Long']].values)
+        dc_coords = np.radians(dc_data[['Lat', 'Long']].values)
         hub_tree = BallTree(dc_coords, metric='haversine')
     
-        # คำนวณระยะทางไป hub ที่ใกล้ที่สุด
         distances, indices = hub_tree.query(cust_coords, k=1)
-        distances_km = distances.flatten() * 6371  # Earth radius in km
+        distances_km = distances.flatten() * 6371
     
-        # เตรียมตารางแสดงผล
-        nearest_df = cust_data[['Customer_Code', 'Type', 'Province']].copy()
+        # ---------- Prepare result ----------
+        nearest_df = combined_data[['Code', 'Type', 'Province', 'Source']].copy()
         nearest_df['Nearest_Hub'] = dc_data.iloc[indices.flatten()]['Hub_Name'].values
         nearest_df['Distance_km'] = np.round(distances_km, 2)
     
-        st.success(f"✅ Calculated nearest hubs for {len(nearest_df)} customers.")
+        st.success(f"✅ Calculated nearest hubs for {len(nearest_df)} locations (customers + stores).")
         st.dataframe(nearest_df)
     
-        # ✅ (Optional) ปุ่มดาวน์โหลด
+        # ---------- Download ----------
         csv = nearest_df.to_csv(index=False).encode('utf-8-sig')
         st.download_button(
             label="⬇️ Download Nearest Hub Results",
