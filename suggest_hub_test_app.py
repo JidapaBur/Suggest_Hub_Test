@@ -308,49 +308,27 @@ if not cluster_data.empty:
 
 
 
-from geopy.distance import geodesic
-
-# ---------------- Helper function ----------------
-def customers_in_radius_by_hub(hub_list, hub_names, customer_data, radius_km, label_prefix=""):
-    records = []
-
-    for (hub_name, lat, lon) in zip(hub_names, [x[0] for x in hub_list], [x[1] for x in hub_list]):
-        for cust_type in customer_data['Type'].unique():
-            subset = customer_data[customer_data['Type'] == cust_type]
-            count = subset.apply(
-                lambda row: geodesic((row['Lat'], row['Long']), (lat, lon)).km <= radius_km, axis=1
-            ).sum()
-
-            records.append({
-                "Hub_Name": f"{label_prefix}{hub_name}",
-                "Type": cust_type,
-                "Customer_Count": count
-            })
-
-    return pd.DataFrame(records)
-
-# ---------------- Prepare Data ----------------
-# Original hubs
+# เตรียมข้อมูล Hub เดิม
 original_hubs_coords = dc_data[['Lat', 'Long']].values.tolist()
 original_hubs_names = dc_data['Hub_Name'].tolist()
 
-# Suggested hubs (e.g. [(lat, lon), ...])
+# เตรียมข้อมูล Hub ที่เสนอ
 suggested_hubs_coords = new_hub_locations
 suggested_hubs_names = [f"Suggest Hub #{i+1}" for i in range(len(suggested_hubs_coords))]
 
-# ---------------- Generate Tables ----------------
+# สรุปจำนวนลูกค้ารอบ Hub
 original_summary = customers_in_radius_by_hub(
     original_hubs_coords, original_hubs_names, cluster_data, radius_threshold_km
 )
-
 suggested_summary = customers_in_radius_by_hub(
     suggested_hubs_coords, suggested_hubs_names, cluster_data, radius_threshold_km
 )
 
+# รวมตาราง
 combined_summary = pd.concat([original_summary, suggested_summary], ignore_index=True)
 
-# ---------------- Display ----------------
-st.subheader("📊 Customer Count by Type & Hub within Radius")
+# แสดงผล
+st.subheader("📊 Customer Count Within Radius of Each Hub")
 st.dataframe(combined_summary)
 
 
