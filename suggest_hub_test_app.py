@@ -8,6 +8,9 @@ from sklearn.cluster import KMeans
 from geopy.distance import great_circle, geodesic
 import numpy as np
 
+from scipy.spatial.distance import cdist
+from math import radians
+
 import geopandas as gpd
 from shapely.geometry import Point
 
@@ -64,6 +67,7 @@ if cust_file:
         st.stop()
 
 #------------------------------------------------------------------------------------------------------------------------
+    
     # โหลดแผนที่ประเทศไทย
     thailand = gpd.read_file("thailand.geojson")
     thailand_union = thailand.unary_union
@@ -100,26 +104,22 @@ if cust_file:
         dc_data = dc_data[dc_data['Type'].isin(selected_dc_types)]
 
         # Find nearest hub for each customer
-        def find_nearest_dc(cust_lat, cust_lon, dc_df):
-            distances = dc_df.apply(
-                lambda row: great_circle((cust_lat, cust_lon), (row['Lat'], row['Long'])).km,
-                axis=1
-            )
-            idx = distances.idxmin()
-            return dc_df.loc[idx, 'Hub_Name'], distances.min()
-
-        results = []
-        for _, row in cust_data.iterrows():
-            nearest_dc, min_dist = find_nearest_dc(row['Lat'], row['Long'], dc_data)
-            results.append({
-                'Customer_Code': row['Customer_Code'],
-                'Type': row.get('Type', 'Unknown'),
-                'Province': row.get('Province', 'N/A'),
-                'Nearest_Hub': nearest_dc,
-                'Distance_km': round(min_dist, 2)
-            })
-
-        nearest_df = pd.DataFrame(results)
+        # เตรียมจุดลูกค้าและ hub เป็น array [lat, lon] แล้วแปลงเป็น radians
+        cust_coords = np.radians(cust_data[['Lat', 'Long']].values)
+        dc_coords = np.radians(dc_data[['Lat', 'Long']].values)
+        
+        # คำนวณระยะทุกจุดแบบเวกเตอร์
+        dist_matrix = cdist(cust_coords, dc_coords, metric='haversine') * 6371  # ผลลัพธ์หน่วยเป็น km
+        
+        # หาค่า min ระยะทางและตำแหน่ง Hub ที่ใกล้ที่สุด
+        min_dists = dist_matrix.min(axis=1)
+        nearest_indices = dist_matrix.argmin(axis=1)
+        
+        # สร้าง DataFrame ที่เร็วขึ้น
+        nearest_df = cust_data[['Customer_Code', 'Type', 'Province']].copy()
+        nearest_df['Nearest_Hub'] = dc_data.iloc[nearest_indices]['Hub_Name'].values
+        nearest_df['Distance_km'] = np.round(min_dists, 2)
+        
         st.dataframe(nearest_df)
 
   
