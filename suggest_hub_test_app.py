@@ -240,7 +240,7 @@ if cust_file:
                 province_name = "Unknown"
                 for _, prov in provinces_gdf.iterrows():
                     if point.within(prov['geometry']):
-                        province_name = prov.get("PROV_NAMT", "Unknown")  # หรือเปลี่ยนชื่อคอลัมน์ตาม geojson ของคุณ
+                        province_name = prov.get("pro_en", "Unknown")  # หรือเปลี่ยนชื่อคอลัมน์ตาม geojson ของคุณ
                         break
             
                 # แสดง marker + popup จังหวัด
