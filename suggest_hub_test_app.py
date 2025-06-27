@@ -68,7 +68,7 @@ if cust_file:
     thailand = gpd.read_file("thailand.geojson")
     thailand_union = thailand.unary_union
     
-    provinces_gdf = gpd.read_file("thailand_provinces.geojson")
+    provinces_gdf = gpd.read_file("provinces.geojson")
     
     # แปลงลูกค้าเป็น GeoDataFrame
     cust_data['geometry'] = cust_data.apply(lambda row: Point(row['Long'], row['Lat']), axis=1)
