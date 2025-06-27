@@ -233,37 +233,37 @@ if dc_file:
         # ❗ ถ้าทำไม่สำเร็จใน max_retry → ยอมใช้ค่าที่ได้ (อาจหลุดทะเล)
         return [(lat, lon) for lat, lon in centers]
             
-        #------------------------ Main Block ------------------------
+    #------------------------ Main Block ------------------------
         
-        # -------------------- สร้าง BallTree และคำนวณระยะใกล้ที่สุด --------------------
-        hub_tree = BallTree(dc_coords, metric='haversine')
-        distances, _ = hub_tree.query(cust_coords, k=1)  # ระยะใกล้ที่สุดจากแต่ละลูกค้า
-        distances_km = distances.flatten() * 6371  # คูณรัศมีโลกให้เป็น km
+    # -------------------- สร้าง BallTree และคำนวณระยะใกล้ที่สุด --------------------
+    hub_tree = BallTree(dc_coords, metric='haversine')
+    distances, _ = hub_tree.query(cust_coords, k=1)  # ระยะใกล้ที่สุดจากแต่ละลูกค้า
+    distances_km = distances.flatten() * 6371  # คูณรัศมีโลกให้เป็น km
         
-        # -------------------- ตัดสินว่าอยู่นอกระยะ hub เดิมหรือไม่ --------------------
-        cust_data['Outside_Hub'] = distances_km > radius_threshold_km
+    # -------------------- ตัดสินว่าอยู่นอกระยะ hub เดิมหรือไม่ --------------------
+    cust_data['Outside_Hub'] = distances_km > radius_threshold_km
         
-        # -------------------- แปลงเป็น GeoDataFrame เพื่อตรวจสอบว่าอยู่ในประเทศไทย --------------------
-        cust_data['geometry'] = cust_data.apply(lambda row: Point(row['Long'], row['Lat']), axis=1)
-        cust_gdf = gpd.GeoDataFrame(cust_data, geometry='geometry', crs="EPSG:4326")
-        cust_gdf = cust_gdf[cust_gdf.geometry.within(thailand_union)]
+    # -------------------- แปลงเป็น GeoDataFrame เพื่อตรวจสอบว่าอยู่ในประเทศไทย --------------------
+    cust_data['geometry'] = cust_data.apply(lambda row: Point(row['Long'], row['Lat']), axis=1)
+    cust_gdf = gpd.GeoDataFrame(cust_data, geometry='geometry', crs="EPSG:4326")
+    cust_gdf = cust_gdf[cust_gdf.geometry.within(thailand_union)]
         
-        # ✅ ลูกค้าที่อยู่ในประเทศไทยทั้งหมด (จะรวมทั้งในระยะและนอกระยะ)
-        cluster_data = cust_gdf.copy()
+    # ✅ ลูกค้าที่อยู่ในประเทศไทยทั้งหมด (จะรวมทั้งในระยะและนอกระยะ)
+    cluster_data = cust_gdf.copy()
                 
-        st.markdown(
-            f"<b>{len(cluster_data)} customers</b> will be used for new hub suggestions (in and out of coverage, inside Thailand).",
-            unsafe_allow_html=True
-        )
+    st.markdown(
+        f"<b>{len(cluster_data)} customers</b> will be used for new hub suggestions (in and out of coverage, inside Thailand).",
+        unsafe_allow_html=True
+    )
         
-        if not cluster_data.empty:
-            n_new_hubs = st.slider("How many new hubs to suggest from all customers?", 1, 10, 3)
-            new_hub_locations = kmeans_within_thailand(cluster_data, n_new_hubs, thailand_union)
+    if not cluster_data.empty:
+        n_new_hubs = st.slider("How many new hubs to suggest from all customers?", 1, 10, 3)
+        new_hub_locations = kmeans_within_thailand(cluster_data, n_new_hubs, thailand_union)
             
-            st.subheader("New Hub Suggestions Map")
-            m_new = folium.Map(location=[13.75, 100.5], zoom_start=6, control_scale=True)
+        st.subheader("New Hub Suggestions Map")
+        m_new = folium.Map(location=[13.75, 100.5], zoom_start=6, control_scale=True)
             
-     #------------------------------------------------------------------------------------------------------------------------
+    #------------------------------------------------------------------------------------------------------------------------
                 
         # Layer visibility controls
             with st.expander("🧭 Layer Visibility Controls"):
