@@ -105,43 +105,42 @@ if store_file:
         st.error(f"❌ Failed to load store file: {e}")
         st.stop()
 
-
-#------------------------------------------------------------------------------------------------------------------------
-    
-# ---------------- โหลดแผนที่ประเทศไทย ----------------
+# ------------------------------ Load Thailand Map ------------------------------
 thailand = gpd.read_file("thailand.geojson")
 thailand_union = thailand.unary_union
-
 provinces_gdf = gpd.read_file("provinces.geojson")
 
-# ---------------- แปลงลูกค้าเป็น GeoDataFrame และกรองให้อยู่ในประเทศไทย ----------------
-cust_data['geometry'] = cust_data.apply(lambda row: Point(row['Long'], row['Lat']), axis=1)
-cust_gdf = gpd.GeoDataFrame(cust_data, geometry='geometry', crs="EPSG:4326")
-cust_gdf = cust_gdf[cust_gdf.geometry.within(thailand_union)]
-cust_data = pd.DataFrame(cust_gdf.drop(columns='geometry'))
+# ------------------------------ Filter points inside Thailand ------------------------------
+sources = []
 
-# ---------------- ทำเหมือนกันกับ Store ----------------
-if 'store_data' in locals():
+if cust_data is not None:
+    cust_data['geometry'] = cust_data.apply(lambda row: Point(row['Long'], row['Lat']), axis=1)
+    cust_gdf = gpd.GeoDataFrame(cust_data, geometry='geometry', crs="EPSG:4326")
+    cust_gdf = cust_gdf[cust_gdf.geometry.within(thailand_union)]
+    cust_data = cust_gdf.drop(columns='geometry')
+    cust_data['Source'] = "Customer"
+    cust_data = cust_data.rename(columns={"Customer_Code": "Code"})
+    sources.append(cust_data)
+
+if store_data is not None:
     store_data['geometry'] = store_data.apply(lambda row: Point(row['Long'], row['Lat']), axis=1)
     store_gdf = gpd.GeoDataFrame(store_data, geometry='geometry', crs="EPSG:4326")
     store_gdf = store_gdf[store_gdf.geometry.within(thailand_union)]
-    store_data = pd.DataFrame(store_gdf.drop(columns='geometry'))
-
-# ---------------- รวม Customer และ Store ----------------
-cust_data['Source'] = "Customer"
-cust_data = cust_data.rename(columns={"Customer_Code": "Code"})
-
-if 'store_data' in locals():
+    store_data = store_gdf.drop(columns='geometry')
     store_data['Source'] = "Store"
     store_data = store_data.rename(columns={"Store_Code": "Code"})
-    combined_data = pd.concat([cust_data, store_data], ignore_index=True)
-else:
-    combined_data = cust_data.copy()
+    sources.append(store_data)
 
-# ---------------- Filter by Type ----------------
-all_types = combined_data['Type'].dropna().unique().tolist()
-selected_types = st.multiselect("Filter Location Types:", options=all_types, default=all_types)
-combined_data = combined_data[combined_data['Type'].isin(selected_types)]
+if sources:
+    combined_data = pd.concat(sources, ignore_index=True)
+
+    # ---------------- Filter by Type ----------------
+    all_types = combined_data['Type'].dropna().unique().tolist()
+    selected_types = st.multiselect("Filter Location Types:", options=all_types, default=all_types)
+    combined_data = combined_data[combined_data['Type'].isin(selected_types)]
+else:
+    st.warning("⚠️ Please upload at least one file: Customer or Store.")
+    st.stop()
 
 #------------------------------------------------------------------------------------------------------------------------
 
