@@ -173,18 +173,28 @@ if cust_file:
     
     #------------------------------------------------------------------------------------------------------------------------
         
-        # ฟังก์ชัน: Loop KMeans จนได้ centroid ทุกจุดอยู่ในประเทศไทย
-        def kmeans_within_thailand(data, n_clusters, thailand_polygon, max_retry=20):
-            for i in range(max_retry):
-                kmeans = KMeans(n_clusters=n_clusters, random_state=42 + i)
-                kmeans.fit(data[['Lat', 'Long']])
-                centers = kmeans.cluster_centers_
-        
-                if all(Point(lon, lat).within(thailand_polygon) for lat, lon in centers):
-                    return [(lat, lon) for lat, lon in centers]
-            # ถ้าไม่สำเร็จภายใน max_retry → ยอมใช้ค่าที่ได้ แม้อาจอยู่นอกไทย
-            return [(lat, lon) for lat, lon in centers]
-        
+    def kmeans_within_thailand(data, n_clusters, thailand_polygon, max_retry=10):
+        # ✅ แนะนำ: simplify polygon เพื่อให้ within() เร็วขึ้น (ค่า 0.01 = ประมาณ 1 กม.)
+        simplified_polygon = thailand_polygon.simplify(0.01)
+    
+        for i in range(max_retry):
+            kmeans = KMeans(n_clusters=n_clusters, random_state=42 + i)
+            kmeans.fit(data[['Lat', 'Long']])
+            centers = kmeans.cluster_centers_
+    
+            # ✅ Vectorized check: แปลงศูนย์กลางเป็น GeoSeries
+            centers_geometry = gpd.GeoSeries(
+                [Point(lon, lat) for lat, lon in centers],
+                crs="EPSG:4326"
+            )
+    
+            # ✅ ตรวจว่า center ทุกจุดอยู่ใน polygon ไทยที่ simplify แล้ว
+            if centers_geometry.within(simplified_polygon).all():
+                return [(lat, lon) for lat, lon in centers]
+    
+        # ❗ ถ้าทำไม่สำเร็จใน max_retry → ยอมใช้ค่าที่ได้ (อาจหลุดทะเล)
+        return [(lat, lon) for lat, lon in centers]
+            
         #------------------------ Main Block ------------------------
         
         # -------------------- สร้าง BallTree และคำนวณระยะใกล้ที่สุด --------------------
