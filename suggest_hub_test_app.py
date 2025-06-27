@@ -308,48 +308,44 @@ if not cluster_data.empty:
 
 
 
+from geopy.distance import geodesic
 
-# ---------------------- คำนวณระยะจาก hub เดิม ----------------------
-def is_within_existing_hub(lat, lon, dc_data, threshold_km):
-    return any(
-        geodesic((lat, lon), (hub_lat, hub_lon)).km <= threshold_km
-        for hub_lat, hub_lon in dc_data[['Lat', 'Long']].values
-    )
+# สร้าง flag ว่าอยู่ในรัศมี hub เดิม
+def in_radius_any_hub(lat, lon, hubs, radius_km):
+    return any(geodesic((lat, lon), (hub_lat, hub_lon)).km <= radius_km for hub_lat, hub_lon in hubs)
 
-# ---------------------- คำนวณระยะจาก suggested hub ----------------------
-def is_within_suggested_hub(lat, lon, suggested_locations, threshold_km):
-    return any(
-        geodesic((lat, lon), (hub_lat, hub_lon)).km <= threshold_km
-        for hub_lat, hub_lon in suggested_locations
-    )
+# เตรียมข้อมูลศูนย์กระจาย
+original_hubs = dc_data[['Lat', 'Long']].values.tolist()
+suggested_hubs = new_hub_locations
 
-# คำนวณสถานะของลูกค้าแต่ละราย
-combined_data['In_Existing_Hub'] = combined_data.apply(
-    lambda row: is_within_existing_hub(row['Lat'], row['Long'], dc_data, radius_threshold_km2), axis=1
-)
-combined_data['In_Suggested_Hub'] = combined_data.apply(
-    lambda row: is_within_suggested_hub(row['Lat'], row['Long'], new_hub_locations, radius_threshold_km2), axis=1
+# ตรวจสอบลูกค้าแต่ละราย
+cluster_data['In_Original_Hub_Radius'] = cluster_data.apply(
+    lambda row: in_radius_any_hub(row['Lat'], row['Long'], original_hubs, radius_threshold_km),
+    axis=1
 )
 
-# เงื่อนไขการจัดกลุ่ม
-def classify_coverage(row):
-    if row['In_Existing_Hub']:
-        return 'In Existing Hub Radius'
-    elif row['In_Suggested_Hub']:
-        return 'In Suggested Hub Radius'
-    else:
-        return 'Outside All Coverage'
-
-combined_data['Coverage_Status'] = combined_data.apply(classify_coverage, axis=1)
-
-# ---------------------- สร้าง Summary Table ----------------------
-summary_table = (
-    combined_data['Coverage_Status']
-    .value_counts()
-    .reset_index()
-    .rename(columns={'index': 'Coverage Status', 'Coverage_Status': 'Customer Count'})
+cluster_data['In_Suggested_Hub_Radius'] = cluster_data.apply(
+    lambda row: in_radius_any_hub(row['Lat'], row['Long'], suggested_hubs, radius_threshold_km),
+    axis=1
 )
 
-# ---------------------- แสดงผล ----------------------
-st.subheader("📊 Customer Distribution by Coverage Zone")
-st.dataframe(summary_table)
+# สรุปผล: จำนวนลูกค้าในแต่ละกลุ่ม
+summary_df = pd.DataFrame({
+    "In original hub radius only": [
+        cluster_data[(cluster_data['In_Original_Hub_Radius']) & (~cluster_data['In_Suggested_Hub_Radius'])].shape[0]
+    ],
+    "In suggested hub radius only": [
+        cluster_data[(~cluster_data['In_Original_Hub_Radius']) & (cluster_data['In_Suggested_Hub_Radius'])].shape[0]
+    ],
+    "In both radii": [
+        cluster_data[(cluster_data['In_Original_Hub_Radius']) & (cluster_data['In_Suggested_Hub_Radius'])].shape[0]
+    ],
+    "In neither radius": [
+        cluster_data[(~cluster_data['In_Original_Hub_Radius']) & (~cluster_data['In_Suggested_Hub_Radius'])].shape[0]
+    ]
+})
+
+# แสดงตารางสรุป
+st.subheader("📊 Customer Coverage Summary by Radius")
+st.dataframe(summary_df)
+
