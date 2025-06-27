@@ -8,6 +8,10 @@ from sklearn.cluster import KMeans
 from geopy.distance import great_circle, geodesic
 import numpy as np
 
+pip install geopandas shapely
+import geopandas as gpd
+from shapely.geometry import Point
+
 #------------------------------------------------------------------------------------------------------------------------
 
 st.set_page_config(layout="wide")
@@ -61,8 +65,20 @@ if cust_file:
         st.stop()
 
 #------------------------------------------------------------------------------------------------------------------------
+    # โหลดแผนที่ประเทศไทย
+    thailand = gpd.read_file("thailand.geojson") 
+
+    # แปลงลูกค้าเป็น GeoDataFrame
+    cust_data['geometry'] = cust_data.apply(lambda row: Point(row['Long'], row['Lat']), axis=1)
+    cust_gdf = gpd.GeoDataFrame(cust_data, geometry='geometry', crs="EPSG:4326")
     
-    # Filter: only customers within Thailand bounding box
+    # กรองเฉพาะลูกค้าที่อยู่ในขอบเขตประเทศไทยจริง
+    cust_gdf = cust_gdf[cust_gdf.geometry.within(thailand.unary_union)]
+    
+    # คืนค่า DataFrame กลับไปใช้งานต่อ
+    cust_data = pd.DataFrame(cust_gdf.drop(columns='geometry'))
+
+    ### Filter: only customers within Thailand bounding box
     THAI_BOUNDING_BOX = {
         'min_lat': 5.61,
         'max_lat': 20.46,
@@ -74,7 +90,7 @@ if cust_file:
         (cust_data['Lat'] <= THAI_BOUNDING_BOX['max_lat']) &
         (cust_data['Long'] >= THAI_BOUNDING_BOX['min_lon']) &
         (cust_data['Long'] <= THAI_BOUNDING_BOX['max_lon'])
-    ]
+    ]###
 
 
 #------------------------------------------------------------------------------------------------------------------------
