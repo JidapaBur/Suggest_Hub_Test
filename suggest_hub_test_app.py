@@ -219,7 +219,7 @@ if not cluster_data.empty:
             for _, row in dc_data.iterrows():
                 folium.Circle(
                     location=[row['Lat'], row['Long']],
-                    radius=radius_threshold_km,
+                    radius=radius_threshold_km*100,
                     color='gray',
                     fill=False,
                     dash_array="5"
@@ -266,7 +266,7 @@ if not cluster_data.empty:
             # วงรัศมี
             folium.Circle(
                 location=[lat, lon],
-                radius=radius_threshold_km,
+                radius=radius_threshold_km*100,
                 color='darkgreen',
                 fill=True,
                 fill_opacity=0.1,
