@@ -20,7 +20,7 @@ from shapely.geometry import Point
 st.set_page_config(layout="wide")
 st.title("Customer & Hub Visualization Tool")
 # Footer note
-st.markdown("<div style='text-align:right; font-size:12px; color:gray;'>Version 1.0.3 Developed by Jidapa Buranachan</div>", unsafe_allow_html=True)
+st.markdown("<div style='text-align:right; font-size:12px; color:gray;'>Version 1.0.4 Developed by Jidapa Buranachan</div>", unsafe_allow_html=True)
 
 #------------------------------------------------------------------------------------------------------------------------
 
@@ -28,9 +28,11 @@ st.markdown("<div style='text-align:right; font-size:12px; color:gray;'>Version 
 # Downloadable template section
 st.markdown("### Download Template Files")
 cust_template = pd.DataFrame(columns=["Customer_Code", "Lat", "Long", "Type", "Province"])
+store_template = pd.DataFrame(columns=["Store_Code", "Lat", "Long", "Type", "Province"])
 dc_template = pd.DataFrame(columns=["Hub_Name", "Lat", "Long", "Type", "Province"])
 
-col1, col2 = st.columns(2)
+col1, col2, col3 = st.columns(3)
+
 with col1:
     st.download_button(
         label="⬇️ Download Customer Template",
@@ -38,7 +40,16 @@ with col1:
         file_name='Customer_Template.csv',
         mime='text/csv'
     )
+
 with col2:
+    st.download_button(
+        label="⬇️ Download Store Template",
+        data=store_template.to_csv(index=False).encode('utf-8-sig'),
+        file_name='Store_Template.csv',
+        mime='text/csv'
+    )
+
+with col3:
     st.download_button(
         label="⬇️ Download Hub Template",
         data=dc_template.to_csv(index=False).encode('utf-8-sig'),
@@ -48,10 +59,12 @@ with col2:
 
 #------------------------------------------------------------------------------------------------------------------------
 
-# Upload files
-cust_file = st.file_uploader("Upload Customer File (.csv with Lat, Long, Customer_Code, Type, Province)", type="csv")
-dc_file = st.file_uploader("Upload Hub File (.csv with Lat, Long, Hub_Name, Type, Province)", type="csv")
+# ------------------------------ Upload files ------------------------------
+cust_file = st.file_uploader("📤 Upload Customer File (.csv with Lat, Long, Customer_Code, Type, Province)", type="csv")
+store_file = st.file_uploader("📤 Upload Store File (.csv with Lat, Long, Store_Code, Type, Province)", type="csv")
+dc_file = st.file_uploader("📤 Upload Hub File (.csv with Lat, Long, Hub_Name, Type, Province)", type="csv")
 
+# ------------------------------ Load Customer File ------------------------------
 if cust_file:
     try:
         cust_data = pd.read_csv(cust_file)
@@ -59,12 +72,26 @@ if cust_file:
             st.error("🚫 Customer CSV file is empty. Please upload a file with data.")
             st.stop()
         cust_data = cust_data.dropna(subset=['Lat', 'Long'])
-
     except pd.errors.EmptyDataError:
         st.error("🚫 Customer CSV file is empty or corrupted.")
         st.stop()
     except Exception as e:
         st.error(f"❌ Failed to load customer file: {e}")
+        st.stop()
+
+# ------------------------------ Load Store File ------------------------------
+if store_file:
+    try:
+        store_data = pd.read_csv(store_file)
+        if store_data.empty:
+            st.error("🚫 Store CSV file is empty. Please upload a file with data.")
+            st.stop()
+        store_data = store_data.dropna(subset=['Lat', 'Long'])
+    except pd.errors.EmptyDataError:
+        st.error("🚫 Store CSV file is empty or corrupted.")
+        st.stop()
+    except Exception as e:
+        st.error(f"❌ Failed to load store file: {e}")
         st.stop()
 
 #------------------------------------------------------------------------------------------------------------------------
