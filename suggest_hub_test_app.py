@@ -231,7 +231,7 @@ if cust_file:
             # Outside customer layer with brand-based color
             outside_customers = cust_gdf[cust_gdf['Outside_Hub'] == True]
             outside_layer = FeatureGroup(name="Outside Customers")
-            for _, row in outside_customer.iterrows():
+            for _, row in outside_customers.iterrows():
                 color = 'red' if row.get('Type', '').lower() == 'makro' else 'blue'
                 folium.CircleMarker(
                     location=[row['Lat'], row['Long']],
