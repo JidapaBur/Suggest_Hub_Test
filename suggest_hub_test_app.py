@@ -306,22 +306,43 @@ if not cluster_data.empty:
 
 
 
-    # ---------------- Helper function ----------------
-    def customers_in_radius_by_hub(hub_list, hub_names, customer_data, radius_km, label_prefix=""):
-        records = []
-        for (hub_name, lat, lon) in zip(hub_names, [x[0] for x in hub_list], [x[1] for x in hub_list]):
-            count = customer_data.apply(
-                lambda row: geodesic((row['Lat'], row['Long']), (lat, lon)).km <= radius_km,
-                axis=1
-            ).sum()
-            records.append({
-                "Hub_Name": f"{label_prefix}{hub_name}",
-                "Customer_Count": count
-            })
-        return pd.DataFrame(records)
-    
-    # ---------------- Use it ----------------
-    original_summary = customers_in_radius_by_hub(...)
+ # ---------------- Helper function ----------------
+def customers_in_radius_by_hub(hub_list, hub_names, customer_data, radius_km, label_prefix=""):
+    records = []
+    for (hub_name, lat, lon) in zip(hub_names, [x[0] for x in hub_list], [x[1] for x in hub_list]):
+        count = customer_data.apply(
+            lambda row: geodesic((row['Lat'], row['Long']), (lat, lon)).km <= radius_km,
+            axis=1
+        ).sum()
+        records.append({
+            "Hub_Name": f"{label_prefix}{hub_name}",
+            "Customer_Count": count
+        })
+    return pd.DataFrame(records)
+
+# ---------------- Prepare Data ----------------
+# Original hubs
+original_hubs_coords = dc_data[['Lat', 'Long']].values.tolist()
+original_hubs_names = dc_data['Hub_Name'].tolist()
+
+# Suggested hubs (e.g. [(lat, lon), ...])
+suggested_hubs_coords = new_hub_locations
+suggested_hubs_names = [f"Suggest Hub #{i+1}" for i in range(len(suggested_hubs_coords))]
+
+# ---------------- Generate Tables ----------------
+original_summary = customers_in_radius_by_hub(
+    original_hubs_coords, original_hubs_names, cluster_data, radius_threshold_km
+)
+
+suggested_summary = customers_in_radius_by_hub(
+    suggested_hubs_coords, suggested_hubs_names, cluster_data, radius_threshold_km
+)
+
+combined_summary = pd.concat([original_summary, suggested_summary], ignore_index=True)
+
+# ---------------- Display ----------------
+st.subheader("📊 Customer Count by Type & Hub within Radius")
+st.dataframe(combined_summary)
 
 
 
